@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizCraft — UK & Cambridge Assessment Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --ink: #1a1814;
+  --ink2: #4a4640;
+  --ink3: #8a8480;
+  --paper: #faf9f6;
+  --paper2: #f2f0eb;
+  --paper3: #e8e4dc;
+  --rule: #d8d4cc;
+  --accent: #2d5a3d;
+  --accent2: #4a8c60;
+  --accent-pale: #e8f2ec;
+  --red: #b03a2e;
+  --red-pale: #fbeae8;
+  --amber: #9a6800;
+  --amber-pale: #fef3d8;
+  --blue: #1a4a7a;
+  --blue-pale: #e8f0f8;
+  --r: 6px;
+  --r2: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper2);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── LAYOUT ── */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-logo h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-logo p {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+}
+
+.sidebar-section {
+  padding: 14px 10px 6px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  padding-left: 14px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  border-radius: var(--r);
+  margin: 1px 6px;
+  color: rgba(255,255,255,0.65);
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: calc(100% - 12px);
+  text-align: left;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-item.active { background: var(--accent); color: #fff; font-weight: 500; }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+.main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+.topbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.2px;
+}
+
+.topbar-sub { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+
+.content { padding: 24px 28px; flex: 1; }
+
+/* ── CARDS & PANELS ── */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 14px;
+  color: var(--ink);
+}
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+/* ── FORM ELEMENTS ── */
+label.lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink3);
+  margin-bottom: 5px;
+}
+
+input[type=text], input[type=number], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(74,140,96,0.12);
+}
+textarea { resize: vertical; line-height: 1.6; }
+
+.form-group { margin-bottom: 14px; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+}
+.btn:hover { background: var(--paper2); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-red { background: var(--red); color: #fff; border-color: var(--red); }
+.btn-red:hover { background: #8e2e23; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+}
+.badge-green { background: var(--accent-pale); color: var(--accent); }
+.badge-amber { background: var(--amber-pale); color: var(--amber); }
+.badge-red { background: var(--red-pale); color: var(--red); }
+.badge-blue { background: var(--blue-pale); color: var(--blue); }
+.badge-gray { background: var(--paper3); color: var(--ink2); }
+
+/* ── STAT TILES ── */
+.stat-tile {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.stat-val {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.stat-lbl { font-size: 12px; color: var(--ink3); }
+.stat-delta { font-size: 11px; margin-top: 4px; }
+.delta-up { color: var(--accent); }
+.delta-down { color: var(--red); }
+
+/* ── TABLES ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink3);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper2);
+}
+.tbl td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--paper3);
+  vertical-align: middle;
+}
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: var(--paper2); }
+
+/* ── QUIZ BUILDER ── */
+.qt-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 14px; }
+.qt-btn {
+  padding: 7px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--ink2);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+.qt-btn:hover { background: var(--paper2); }
+.qt-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 500; }
+
+.mcq-opt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.mcq-opt-row .opt-lbl { font-size: 12px; font-weight: 500; color: var(--ink3); min-width: 16px; }
+.mcq-opt-row input[type=text] { flex: 1; }
+
+.q-card {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.q-card-meta { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.q-card-text { font-size: 13px; color: var(--ink); line-height: 1.5; }
+.q-del { position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--ink3); padding: 2px 5px; border-radius: 4px; }
+.q-del:hover { background: var(--paper3); color: var(--red); }
+
+/* ── STUDENT QUIZ VIEW ── */
+.quiz-wrap { max-width: 720px; margin: 0 auto; }
+.q-image-block { margin-bottom: 8px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--rule); }
+.q-image-block img { display: block; width: 100%; pointer-events: none; user-select: none; }
+.q-graphic-wrap {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.q-graphic-wrap svg { width: 100%; max-height: 180px; display: block; }
+.graphic-loading { font-size: 12px; color: var(--ink3); font-style: italic; }
+
+.quiz-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 13px;
+  background: var(--paper);
+  user-select: none;
+}
+.quiz-opt:hover { background: var(--paper2); border-color: var(--ink3); }
+.quiz-opt.selected { border-color: var(--ink); background: var(--paper2); font-weight: 500; }
+.quiz-opt.correct { border-color: var(--accent2); background: var(--accent-pale); color: var(--accent); }
+.quiz-opt.wrong { border-color: var(--red); background: var(--red-pale); color: var(--red); }
+.opt-letter { font-size: 11px; font-weight: 500; color: var(--ink3); min-width: 18px; }
+
+.gap-input {
+  border: none;
+  border-bottom: 1.5px solid var(--ink);
+  border-radius: 0;
+  padding: 1px 6px;
+  min-width: 90px;
+  font-size: 14px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--ink);
+  display: inline-block;
+  width: auto;
+}
+
+.oe-feedback {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+}
+.marks-chip { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--accent); }
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── MONITORING ── */
+.student-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--paper3);
+}
+.student-row:last-child { border-bottom: none; }
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--paper3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 500; color: var(--ink2);
+  flex-shrink: 0;
+}
+.progress-bar-wrap { flex: 1; background: var(--paper3); border-radius: 20px; height: 6px; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 20px; background: var(--accent2); transition: width 0.4s; }
+
+/* ── SPINNER ── */
+.spinner {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid var(--rule);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--paper3); margin: 18px 0; }
+
+/* ── SUBJECT TAGS ── */
+.subject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.subject-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--paper);
+  color: var(--ink2);
+  transition: all 0.12s;
+}
+.subject-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 500; }
+
+/* ── GRADE DISPLAY ── */
+.grade-big {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.grade-A { color: var(--accent); }
+.grade-B { color: var(--blue); }
+.grade-C { color: var(--amber); }
+.grade-D { color: #c05a00; }
+.grade-E { color: var(--red); }
+.grade-U { color: var(--ink3); }
+
+/* ── HEATMAP ── */
+.heatmap-grid { display: grid; gap: 3px; }
+.hm-cell {
+  padding: 8px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: default;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; border-bottom: 1px solid var(--rule); margin-bottom: 20px; }
+.tab-btn {
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── EMPTY STATE ── */
+.empty { text-align: center; padding: 32px; color: var(--ink3); font-size: 13px; font-style: italic; }
+
+/* ── SCROLL ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* ── QUIZ PLAYER OVERLAY ── */
+.quiz-overlay {
+  position: fixed; inset: 0;
+  background: var(--paper2);
+  z-index: 100;
+  overflow-y: auto;
+  display: none;
+}
+.quiz-overlay.open { display: block; }
+.quiz-header {
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.quiz-header h2 { font-family: 'DM Serif Display', serif; font-size: 18px; font-weight: 400; }
+.quiz-header p { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+
+/* ── GRID TABLE ── */
+.grid-match { font-size: 13px; }
+.grid-match-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.grid-term { min-width: 130px; padding: 6px 10px; background: var(--paper2); border-radius: var(--r); border: 1px solid var(--rule); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>QuizCraft</h1>
+      <p>UK & Cambridge Platform</p>
+    </div>
+    <div class="sidebar-section">Teacher</div>
+    <button class="nav-item active" onclick="nav('overview')"><span class="nav-icon">◈</span> Overview</button>
+    <button class="nav-item" onclick="nav('builder')"><span class="nav-icon">✦</span> Quiz Builder</button>
+    <button class="nav-item" onclick="nav('quizzes')"><span class="nav-icon">▤</span> My Quizzes</button>
+    <button class="nav-item" onclick="nav('monitor')"><span class="nav-icon">◉</span> Live Monitor</button>
+    <button class="nav-item" onclick="nav('analytics')"><span class="nav-icon">◎</span> Analytics</button>
+    <div class="sidebar-section" style="margin-top:12px">Student</div>
+    <button class="nav-item" onclick="nav('student')"><span class="nav-icon">◷</span> Take a Quiz</button>
+    <div class="sidebar-section" style="margin-top:12px">App</div>
+    <button class="nav-item" onclick="nav('settings')"><span class="nav-icon">⚙</span> Settings</button>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Overview</div>
+        <div class="topbar-sub" id="topbar-sub">QuizCraft · UK & Cambridge Assessment Platform</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge badge-green">Teacher Mode</span>
+        <button class="btn btn-sm btn-primary" onclick="nav('builder')">+ New Quiz</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── OVERVIEW ── -->
+      <div id="page-overview" class="page active">
+        <div class="grid4" style="margin-bottom:20px">
+          <div class="stat-tile">
+            <div class="stat-val" id="stat-quizzes">0</div>
+            <div class="stat-lbl">Quizzes created</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val" id="stat-live">0</div>
+            <div class="stat-lbl">Live now</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val" id="stat-submissions">0</div>
+            <div class="stat-lbl">Submissions</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val" id="stat-avg">—</div>
+            <div class="stat-lbl">Avg score</div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title">Recent quizzes</div>
+            <div id="overview-recent"><div class="empty">No quizzes yet. Create one in Quiz Builder.</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Submission activity</div>
+            <canvas id="activity-chart" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── QUIZ BUILDER ── -->
+      <div id="page-builder" class="page">
+        <div class="grid2" style="align-items:start">
+          <!-- LEFT: settings -->
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">Quiz settings</div>
+              <div class="form-group">
+                <label class="lbl">Quiz title</label>
+                <input type="text" id="b-title" placeholder="e.g. Cell Biology — Unit 3 Test" />
+              </div>
+              <div class="grid2">
+                <div class="form-group">
+                  <label class="lbl">Subject</label>
+                  <select id="b-subject" onchange="onSubjectChange(this)">
+                    <optgroup label="Core">
+                      <option>Mathematics</option><option>English Language</option><option>English Literature</option><option>Combined Science</option>
+                    </optgroup>
+                    <optgroup label="Cambridge">
+                      <option>Biology</option><option>Chemistry</option><option>Physics</option><option>Literature in English</option>
+                    </optgroup>
+                    <optgroup label="Humanities">
+                      <option>History</option><option>Geography</option><option>Religious Studies</option>
+                    </optgroup>
+                    <optgroup label="Languages">
+                      <option>French</option><option>Spanish</option><option>German</option>
+                    </optgroup>
+                    <optgroup label="Arts & Tech">
+                      <option>Art & Design</option><option>Music</option><option>Drama</option><option>Computing</option><option>Design & Technology</option>
+                    </optgroup>
+                    <option value="__other__">+ Add subject…</option>
+                  </select>
+                  <input type="text" id="b-subject-custom" placeholder="Enter subject name" style="display:none;margin-top:6px" />
+                </div>
+                <div class="form-group">
+                  <label class="lbl">Key Stage / Level</label>
+                  <select id="b-ks">
+                    <option>KS3</option><option>KS4 (GCSE)</option><option>KS5 (A-Level)</option>
+                    <option>Cambridge IGCSE</option><option>Cambridge AS</option>
+                    <option>Cambridge A Level</option><option>Cambridge Pre-U</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid2">
+                <div class="form-group">
+                  <label class="lbl">Questions to generate</label>
+                  <input type="number" id="b-qcount" value="5" min="1" max="30" />
+                </div>
+                <div class="form-group">
+                  <label class="lbl">Topic / unit (optional)</label>
+                  <input type="text" id="b-topic" placeholder="e.g. Genetics" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="lbl">Class / group name</label>
+                <input type="text" id="b-class" placeholder="e.g. 10B, Set 2" />
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Add individual question</div>
+              <div class="qt-grid" id="qtGrid">
+                <button class="qt-btn active" onclick="setQType('mcq',this)">Multiple choice</button>
+                <button class="qt-btn" onclick="setQType('multiselect',this)">Multi-select</button>
+                <button class="qt-btn" onclick="setQType('gapfill',this)">Gap fill</button>
+                <button class="qt-btn" onclick="setQType('openended',this)">Open-ended</button>
+                <button class="qt-btn" onclick="setQType('survey',this)">Survey</button>
+                <button class="qt-btn" onclick="setQType('grid',this)">Grid / match</button>
+                <button class="qt-btn" onclick="setQType('gridradio',this)">Grid MCQ</button>
+                <button class="qt-btn" onclick="setQType('gridcheck',this)">Grid checkbox</button>
+              </div>
+              <div class="grid2">
+                <div class="form-group">
+                  <label class="lbl">Marks</label>
+                  <input type="number" id="b-marks" value="1" min="1" max="25" />
+                </div>
+                <div class="form-group">
+                  <label class="lbl">Strand / topic</label>
+                  <input type="text" id="b-qtopic" placeholder="e.g. Osmosis" />
+                </div>
+              </div>
+              <div id="qFormArea"></div>
+              <div class="btn-row">
+                <button class="btn btn-primary" onclick="addQuestion()">Add question</button>
+                <button class="btn" onclick="genAIQuestion()" id="btnGenQ">Generate with AI ↗</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: bank + actions -->
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div class="card-title" style="margin-bottom:0">Question bank (<span id="qBankCount">0</span>)</div>
+                <button class="btn btn-sm" onclick="genAllAI()" id="btnGenAll">AI generate all ↗</button>
+              </div>
+              <div id="questionBank"><div class="empty">No questions yet.</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Save & publish</div>
+              <p style="font-size:13px;color:var(--ink3);margin-bottom:14px">Save as draft or publish immediately to make it available for students.</p>
+              <div class="btn-row" style="margin-top:0">
+                <button class="btn" onclick="saveQuiz('draft')">Save as draft</button>
+                <button class="btn btn-primary" onclick="saveQuiz('live')">Publish quiz</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MY QUIZZES ── -->
+      <div id="page-quizzes" class="page">
+        <div class="card">
+          <div class="card-title">All quizzes</div>
+          <table class="tbl">
+            <thead><tr>
+              <th>Title</th><th>Subject</th><th>Level</th><th>Questions</th><th>Status</th><th>Submissions</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="quizTableBody"><tr><td colspan="7" class="empty">No quizzes yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── LIVE MONITOR ── -->
+      <div id="page-monitor" class="page">
+        <div class="grid2" style="align-items:start">
+          <div class="card">
+            <div class="card-title">Select live quiz</div>
+            <div class="form-group">
+              <label class="lbl">Quiz</label>
+              <select id="monitorQuizSelect" onchange="loadMonitor()">
+                <option value="">— choose a quiz —</option>
+              </select>
+            </div>
+            <div id="monitorStats" style="display:none">
+              <div class="grid2" style="margin-top:12px">
+                <div class="stat-tile"><div class="stat-val" id="mon-submitted">0</div><div class="stat-lbl">Submitted</div></div>
+                <div class="stat-tile"><div class="stat-val" id="mon-inprogress">0</div><div class="stat-lbl">In progress</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Student progress</div>
+            <div id="monitorStudentList"><div class="empty">Select a quiz to monitor.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ANALYTICS ── -->
+      <div id="page-analytics" class="page">
+        <div class="form-group" style="max-width:320px;margin-bottom:20px">
+          <label class="lbl">Select quiz to analyse</label>
+          <select id="analyticsQuizSelect" onchange="loadAnalytics()">
+            <option value="">— choose a quiz —</option>
+          </select>
+        </div>
+        <div id="analyticsArea"><div class="empty">Select a quiz with submissions to view analytics.</div></div>
+      </div>
+
+      <!-- ── STUDENT LINK GENERATOR ── -->
+      <div id="page-student" class="page">
+        <div class="card" style="max-width:680px;margin-bottom:16px">
+          <div class="card-title">Generate student quiz file</div>
+          <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6">Select a published quiz to generate a standalone HTML file. Download it and attach it to a Google Classroom assignment — students open it in any browser, take the quiz, and get instant AI marking.</p>
+          <div id="apiKeyWarning" style="display:none;background:var(--amber-pale);border:1px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--amber)">
+            ⚠ No API key set. Go to <strong>Settings</strong> to add your Anthropic API key — it will be embedded in all downloaded quiz files automatically.
+          </div>
+          <div class="form-group">
+            <label class="lbl">Select live quiz</label>
+            <select id="studentQuizSelect" onchange="previewStudentLink()">
+              <option value="">— choose a published quiz —</option>
+            </select>
+          </div>
+          <div id="studentLinkPreview" style="display:none">
+            <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:var(--r);padding:14px 16px;margin-bottom:14px">
+              <div style="font-size:12px;color:var(--ink3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Quiz summary</div>
+              <div id="studentLinkMeta" style="font-size:13px;line-height:1.8"></div>
+            </div>
+            <div style="background:#e8f2ec;border:1px solid #b2d4be;border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px;color:#2d5a3d">
+              <strong>Google Classroom instructions:</strong><br>
+              1. Click "Download student quiz file" below<br>
+              2. In Google Classroom, create an Assignment<br>
+              3. Attach the downloaded <code style="background:rgba(0,0,0,0.08);padding:1px 5px;border-radius:3px">.html</code> file<br>
+              4. Students click the attachment to open it and take the quiz
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:0">
+            <button class="btn btn-primary" id="btnDownloadQuiz" onclick="downloadStudentQuiz()" disabled>Download student quiz file</button>
+            <button class="btn" id="btnPreviewQuiz" onclick="previewAsStudent()" disabled>Preview as student</button>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:680px">
+          <div class="card-title">In-app student preview</div>
+          <p style="font-size:13px;color:var(--ink3);margin-bottom:14px">For testing — take any live quiz directly here.</p>
+          <div class="grid2">
+            <div class="form-group">
+              <label class="lbl">Select quiz</label>
+              <select id="inappQuizSelect">
+                <option value="">— choose a published quiz —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="lbl">Your name</label>
+              <input type="text" id="studentName" placeholder="e.g. Alex Johnson" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="launchStudentQuiz()">Start quiz in app</button>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div id="page-settings" class="page">
+        <div class="card" style="max-width:600px;margin-bottom:16px">
+          <div class="card-title">Anthropic API Key</div>
+          <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6">
+            Your API key is stored locally in this browser and automatically embedded into every student quiz file you download — you only need to set it once.
+          </p>
+          <div class="form-group">
+            <label class="lbl">API key</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" style="flex:1;font-family:monospace;font-size:12px" />
+              <button class="btn btn-sm" onclick="toggleApiKeyVisibility()" id="btnToggleKey" style="flex-shrink:0">Show</button>
+            </div>
+          </div>
+          <div id="apiKeyStatus" style="font-size:12px;margin-bottom:14px;color:var(--ink3)">Enter your key above and click Save.</div>
+          <button class="btn btn-primary" onclick="saveApiKey()">Save API key</button>
+          <button class="btn btn-sm btn-red" style="margin-left:8px" onclick="clearApiKey()">Clear</button>
+        </div>
+        <div class="card" style="max-width:600px">
+          <div class="card-title">Where to find your API key</div>
+          <p style="font-size:13px;color:var(--ink3);line-height:1.7">
+            1. Go to <strong>console.anthropic.com</strong><br>
+            2. Sign in and click <strong>API Keys</strong> in the left sidebar<br>
+            3. Click <strong>Create Key</strong>, give it a name (e.g. "QuizCraft")<br>
+            4. Copy the key — it starts with <code style="background:var(--paper2);padding:1px 5px;border-radius:3px">sk-ant-</code><br>
+            5. Paste it above and click Save
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ── QUIZ PLAYER OVERLAY ── -->
+<div class="quiz-overlay" id="quizOverlay">
+  <div class="quiz-header">
+    <div>
+      <h2 id="qo-title">Quiz</h2>
+      <p id="qo-meta"></p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="qo-progress" style="font-size:12px;opacity:0.7"></span>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2)" onclick="closeQuizOverlay()">✕ Exit</button>
+    </div>
+  </div>
+  <div style="max-width:720px;margin:0 auto;padding:24px 20px 48px" id="quizPlayerBody"></div>
+  <div style="max-width:720px;margin:0 auto;padding:0 20px 32px">
+    <div id="quizSubmitRow" style="display:none">
+      <button class="btn btn-primary" onclick="submitStudentQuiz()">Submit quiz</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ═══════════════════════════════════════════════
+// INDEXEDDB — local persistence
+// ═══════════════════════════════════════════════
+const DB_NAME = 'QuizCraftDB';
+const DB_VER  = 1;
+const STORE   = 'quizzes';
+let   _db     = null;
+
+function dbOpen() {
+  return new Promise((res, rej) => {
+    if (_db) { res(_db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE))
+        db.createObjectStore(STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = e => { _db = e.target.result; res(_db); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function dbSaveAll(arr) {
+  const db  = await dbOpen();
+  const tx  = db.transaction(STORE, 'readwrite');
+  const st  = tx.objectStore(STORE);
+  await new Promise((res, rej) => {
+    const cl = st.clear();
+    cl.onsuccess = res; cl.onerror = rej;
+  });
+  for (const q of arr) st.put(q);
+  return new Promise((res, rej) => {
+    tx.oncomplete = res; tx.onerror = rej;
+  });
+}
+
+async function dbLoadAll() {
+  const db = await dbOpen();
+  const tx = db.transaction(STORE, 'readonly');
+  const st = tx.objectStore(STORE);
+  return new Promise((res, rej) => {
+    const req = st.getAll();
+    req.onsuccess = e => res(e.target.result || []);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function persistQuizzes() {
+  dbSaveAll(quizzes).catch(e => console.warn('DB save failed:', e));
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const SUBJECTS_ALL = [
+  'Mathematics','English Language','English Literature','Combined Science',
+  'Biology','Chemistry','Physics','Literature in English',
+  'History','Geography','Religious Studies',
+  'French','Spanish','German',
+  'Art & Design','Music','Drama','Computing','Design & Technology'
+];
+
+let quizzes = [];
+let builderQs = [];
+let currentQType = 'mcq';
+
+let activeQuiz = null;
+let studentAnswers = {};
+let studentName = '';
+let aiMarkingStore = {};
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+const pageTitles = {
+  overview: ['Overview', 'Dashboard summary'],
+  builder: ['Quiz Builder', 'Create a new quiz'],
+  quizzes: ['My Quizzes', 'Manage and publish'],
+  monitor: ['Live Monitor', 'Track student progress in real time'],
+  analytics: ['Analytics', 'Results, grades and insights'],
+  student: ['Take a Quiz', 'Student assessment portal'],
+  settings: ['Settings', 'API key and app configuration']
+};
+
+function nav(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.textContent.trim().toLowerCase().includes(pageTitles[p][0].split(' ')[0].toLowerCase()))
+      el.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent = pageTitles[p][0];
+  document.getElementById('topbar-sub').textContent = pageTitles[p][1];
+  if (p === 'overview') updateOverview();
+  if (p === 'quizzes') renderQuizTable();
+  if (p === 'monitor') populateMonitorSelect();
+  if (p === 'analytics') populateAnalyticsSelect();
+  if (p === 'student') populateStudentSelect();
+}
+
+// ═══════════════════════════════════════════════
+// SUBJECT CUSTOM INPUT
+// ═══════════════════════════════════════════════
+function onSubjectChange(sel) {
+  const custom = document.getElementById('b-subject-custom');
+  custom.style.display = sel.value === '__other__' ? 'block' : 'none';
+}
+
+function getSubject() {
+  const sel = document.getElementById('b-subject');
+  if (sel.value === '__other__') {
+    const v = document.getElementById('b-subject-custom').value.trim();
+    return v || 'General';
+  }
+  return sel.value;
+}
+
+// ═══════════════════════════════════════════════
+// BUILDER — QUESTION FORM
+// ═══════════════════════════════════════════════
+function setQType(qt, btn) {
+  currentQType = qt;
+  document.querySelectorAll('.qt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderQForm();
+}
+
+function renderQForm() {
+  const area = document.getElementById('qFormArea');
+  if (currentQType === 'mcq') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Question</label><textarea id="qText" rows="2" placeholder="Type your question…"></textarea></div>
+    <div class="form-group"><label class="lbl">Options (select correct)</label>
+    ${['A','B','C','D'].map((l,i)=>`<div class="mcq-opt-row"><span class="opt-lbl">${l}</span><input type="text" id="opt${i}" placeholder="Option ${l}" /><input type="radio" name="correct" value="${i}" ${i===0?'checked':''} /></div>`).join('')}</div>`;
+  } else if (currentQType === 'multiselect') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Question</label><textarea id="qText" rows="2" placeholder="Select all that apply…"></textarea></div>
+    <div class="form-group"><label class="lbl">Options (tick all correct)</label>
+    ${['A','B','C','D'].map((l,i)=>`<div class="mcq-opt-row"><span class="opt-lbl">${l}</span><input type="text" id="msopt${i}" placeholder="Option ${l}" /><input type="checkbox" value="${i}" /></div>`).join('')}</div>`;
+  } else if (currentQType === 'gapfill') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Sentence (use ___ for each blank)</label><textarea id="qText" rows="3" placeholder="The powerhouse of the cell is the ___ and photosynthesis occurs in the ___"></textarea></div>
+    <div class="form-group"><label class="lbl">Answers (comma separated)</label><input type="text" id="gapAnswers" placeholder="mitochondria, chloroplast" /></div>`;
+  } else if (currentQType === 'openended') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Question</label><textarea id="qText" rows="3" placeholder="Explain why…"></textarea></div>
+    <div class="form-group"><label class="lbl">Mark scheme (for AI marking)</label><textarea id="markScheme" rows="3" placeholder="Key points: 1)… 2)… Award marks for…"></textarea></div>`;
+  } else if (currentQType === 'survey') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Statement</label><textarea id="qText" rows="2" placeholder="How confident are you with…"></textarea></div>
+    <div class="grid2"><div class="form-group"><label class="lbl">Min label</label><input type="text" id="scaleMin" placeholder="Not at all" /></div><div class="form-group"><label class="lbl">Max label</label><input type="text" id="scaleMax" placeholder="Very confident" /></div></div>`;
+  } else if (currentQType === 'grid') {
+    area.innerHTML = `<div class="form-group"><label class="lbl">Instruction</label><input type="text" id="qText" placeholder="Match each term to its definition" /></div>
+    <div class="form-group"><label class="lbl">Terms & definitions</label>
+    <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:11px;color:var(--ink3);padding:4px 6px">Term</th><th style="text-align:left;font-size:11px;color:var(--ink3);padding:4px 6px">Definition</th></tr></thead><tbody>
+    ${[0,1,2,3].map(i=>`<tr><td style="padding:3px 4px"><input type="text" id="gterm${i}" placeholder="Term ${i+1}" /></td><td style="padding:3px 4px"><input type="text" id="gdef${i}" placeholder="Definition ${i+1}" /></td></tr>`).join('')}
+    </tbody></table></div>`;
+  } else if (currentQType === 'gridradio' || currentQType === 'gridcheck') {
+    const isRadio = currentQType === 'gridradio';
+    area.innerHTML = `
+    <div class="form-group"><label class="lbl">Question / instruction</label><textarea id="qText" rows="2" placeholder="${isRadio ? 'Rate each of the following…' : 'Tick all that apply for each…'}"></textarea></div>
+    <div class="form-group"><label class="lbl">Rows (sub-questions, one per line)</label><textarea id="gridRows" rows="4" placeholder="Cell biology&#10;Genetics&#10;Evolution"></textarea></div>
+    <div class="form-group"><label class="lbl">Columns (options, one per line)</label><textarea id="gridCols" rows="3" placeholder="${isRadio ? '1&#10;2&#10;3&#10;4&#10;5' : 'Nucleus&#10;Cell wall&#10;Chloroplast&#10;Mitochondria'}"></textarea></div>
+    ${isRadio ? '' : '<div style="font-size:12px;color:var(--ink3);margin-top:4px">Correct answers are checked per row. Mark correct column(s) for each row below after adding the question.</div>'}`;
+  }
+}
+
+function addQuestion() {
+  const qText = document.getElementById('qText')?.value?.trim();
+  if (!qText) { alert('Please enter question text.'); return; }
+  const marks = parseInt(document.getElementById('b-marks').value) || 1;
+  const topic = document.getElementById('b-qtopic').value.trim();
+  const ks = document.getElementById('b-ks').value;
+  const q = { id: Date.now(), type: currentQType, text: qText, marks, topic, ks };
+  if (currentQType === 'mcq') {
+    q.options = ['A','B','C','D'].map((_,i) => document.getElementById(`opt${i}`)?.value||'').filter(Boolean);
+    q.correct = parseInt(document.querySelector('input[name="correct"]:checked')?.value||0);
+  } else if (currentQType === 'multiselect') {
+    q.options = ['A','B','C','D'].map((_,i) => document.getElementById(`msopt${i}`)?.value||'').filter(Boolean);
+    q.correct = [...document.querySelectorAll('#qFormArea input[type=checkbox]:checked')].map(c=>parseInt(c.value));
+    if (!q.correct.length) q.correct=[0];
+  } else if (currentQType === 'gapfill') {
+    q.answers = (document.getElementById('gapAnswers')?.value||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  } else if (currentQType === 'openended') {
+    q.markScheme = document.getElementById('markScheme')?.value||'';
+  } else if (currentQType === 'survey') {
+    q.scaleMin = document.getElementById('scaleMin')?.value||'Strongly disagree';
+    q.scaleMax = document.getElementById('scaleMax')?.value||'Strongly agree';
+  } else if (currentQType === 'grid') {
+    q.pairs = [0,1,2,3].map(i=>({term:document.getElementById(`gterm${i}`)?.value||'',def:document.getElementById(`gdef${i}`)?.value||''})).filter(p=>p.term&&p.def);
+  } else if (currentQType === 'gridradio' || currentQType === 'gridcheck') {
+    q.rows = (document.getElementById('gridRows')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    q.cols = (document.getElementById('gridCols')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    q.correct = {};
+    if (currentQType === 'gridradio') {
+      q.rows.forEach((_,ri) => { q.correct[ri] = 0; });
+    } else {
+      q.rows.forEach((_,ri) => { q.correct[ri] = [0]; });
+    }
+  }
+  builderQs.push(q);
+  renderBank();
+  document.getElementById('b-qtopic').value='';
+  renderQForm();
+}
+
+function renderBank() {
+  document.getElementById('qBankCount').textContent = builderQs.length;
+  const el = document.getElementById('questionBank');
+  if (!builderQs.length) { el.innerHTML='<div class="empty">No questions yet.</div>'; return; }
+  const types = {mcq:'MCQ',multiselect:'Multi-select',gapfill:'Gap fill',openended:'Open-ended',survey:'Survey',grid:'Grid',gridradio:'Grid MCQ',gridcheck:'Grid checkbox'};
+  el.innerHTML = builderQs.map((q,i) => `
+    <div class="q-card">
+      <button class="q-del" onclick="delQ(${q.id})">×</button>
+      <div class="q-card-meta">
+        <span class="badge badge-gray">${types[q.type]}</span>
+        <span class="badge badge-green">${q.marks}m</span>
+        ${q.topic?`<span class="badge badge-blue">${q.topic}</span>`:''}
+      </div>
+      <div class="q-card-text">Q${i+1}. ${q.text.substring(0,90)}${q.text.length>90?'…':''}</div>
+      ${(q.type==='gridradio'||q.type==='gridcheck') ? renderGridCorrectEditor(q) : ''}
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${q.customImage
+          ? `<img src="${q.customImage}" style="height:36px;border-radius:4px;border:1px solid var(--rule);object-fit:cover" />
+             <span style="font-size:11px;color:var(--accent)">Custom graphic set</span>
+             <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="clearCustomImage(${q.id})">Remove</button>`
+          : `<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3);padding:4px 10px;border:1px dashed var(--rule);border-radius:var(--r);transition:all .15s" onmouseover="this.style.borderColor='var(--ink3)'" onmouseout="this.style.borderColor='var(--rule)'">
+               Upload graphic <input type="file" accept="image/*" style="display:none" onchange="uploadCustomImage(${q.id},this)" />
+             </label>
+             <span style="font-size:11px;color:var(--ink3)">or AI will generate one</span>`
+        }
+      </div>
+    </div>`).join('');
+}
+
+function uploadCustomImage(qid, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const q = builderQs.find(q=>q.id===qid);
+    if (q) { q.customImage = e.target.result; renderBank(); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearCustomImage(qid) {
+  const q = builderQs.find(q=>q.id===qid);
+  if (q) { delete q.customImage; renderBank(); }
+}
+
+function delQ(id) { builderQs = builderQs.filter(q=>q.id!==id); renderBank(); }
+
+function renderGridCorrectEditor(q) {
+  const rows = q.rows||[], cols = q.cols||[], isRadio = q.type==='gridradio';
+  if(!rows.length||!cols.length) return '';
+  const colHeaders = cols.map((c,ci)=>`<th style="padding:3px 6px;text-align:center;font-size:11px;color:var(--ink3);font-weight:500">${c}</th>`).join('');
+  const rowsHtml = rows.map((row,ri)=>{
+    const cells = cols.map((col,ci)=>{
+      const checked = isRadio
+        ? q.correct[ri]===ci || q.correct[ri]===String(ci)
+        : (q.correct[ri]||[]).includes(ci)||(q.correct[ri]||[]).includes(String(ci));
+      return `<td style="padding:4px 6px;text-align:center">
+        <input type="${isRadio?'radio':'checkbox'}"
+          name="bcorr-${q.id}-${ri}"
+          value="${ci}"
+          ${checked?'checked':''}
+          style="accent-color:var(--accent)"
+          onchange="updateGridCorrect(${q.id},${ri},${ci},this.checked,${isRadio})" />
+      </td>`;
+    }).join('');
+    return `<tr><td style="padding:4px 6px;font-size:12px;color:var(--ink2)">${row}</td>${cells}</tr>`;
+  }).join('');
+  return `<div style="margin-top:10px;border-top:1px solid var(--rule);padding-top:8px">
+    <div style="font-size:11px;font-weight:500;color:var(--ink3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Set correct answers</div>
+    <table style="border-collapse:collapse;font-size:12px;width:100%">
+      <thead><tr><td></td>${colHeaders}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+}
+
+function updateGridCorrect(qid, ri, ci, checked, isRadio) {
+  const q = builderQs.find(q=>q.id===qid);
+  if(!q) return;
+  if(isRadio) {
+    q.correct[ri] = ci;
+  } else {
+    if(!q.correct[ri]) q.correct[ri] = [];
+    const arr = q.correct[ri];
+    const idx = arr.indexOf(ci);
+    if(checked && idx===-1) arr.push(ci);
+    else if(!checked && idx!==-1) arr.splice(idx,1);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// AI QUESTION GENERATION
+// ═══════════════════════════════════════════════
+// PROXY_URL is set to /api/claude when hosted on Netlify,
+// or falls back to direct Anthropic API when running inside Claude.ai
+const PROXY_URL = (location.hostname === 'localhost' || location.protocol === 'file:')
+  ? 'https://api.anthropic.com/v1/messages'
+  : '/api/claude';
+
+async function callClaude(prompt, maxTokens=800) {
+  const isProxy = !PROXY_URL.startsWith('https://api.anthropic');
+  const headers = { 'Content-Type': 'application/json' };
+  if (!isProxy) {
+    // Direct call (Claude.ai sandbox) — platform injects auth automatically
+  }
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  const data = await res.json();
+  const raw = (data.content||[]).map(c=>c.text||'').join('').trim();
+  const fi = Math.min(raw.indexOf('[') < 0 ? 1e9 : raw.indexOf('['), raw.indexOf('{') < 0 ? 1e9 : raw.indexOf('{'));
+  const li = Math.max(raw.lastIndexOf(']'), raw.lastIndexOf('}'));
+  return (fi < 1e9 && li > fi) ? raw.slice(fi, li + 1) : raw;
+}
+
+async function genAIQuestion() {
+  const btn = document.getElementById('btnGenQ');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Generating…';
+  const subject = getSubject();
+  const ks = document.getElementById('b-ks').value;
+  const topic = document.getElementById('b-qtopic').value||document.getElementById('b-topic').value||'';
+  const marks = parseInt(document.getElementById('b-marks').value)||1;
+  const types = {mcq:'MCQ',multiselect:'Multi-select',gapfill:'Gap fill',openended:'Open-ended',survey:'Survey',grid:'Grid/match',gridradio:'Grid MCQ',gridcheck:'Grid checkbox'};
+  const prompt = `Generate one ${types[currentQType]} question for ${ks} ${subject}${topic?' on '+topic:''}.
+Respond ONLY with JSON, no markdown.
+Structures:
+mcq: {"text":"…","options":["…","…","…","…"],"correct":0}
+multiselect: {"text":"…","options":["…","…","…","…"],"correct":[0,2]}
+gapfill: {"text":"sentence with ___","answers":["word1"]}
+openended: {"text":"…","markScheme":"key points for ${marks} marks"}
+survey: {"text":"…","scaleMin":"Strongly disagree","scaleMax":"Strongly agree"}
+grid: {"text":"Match each…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"},{"term":"…","def":"…"}]}`;
+  try {
+    const raw = await callClaude(prompt);
+    const parsed = JSON.parse(raw);
+    if (!parsed.text) throw new Error();
+    builderQs.push({ id:Date.now(), type:currentQType, marks, topic, ks:document.getElementById('b-ks').value, ...parsed });
+    renderBank();
+  } catch(e) { alert('AI generation failed. Try again.'); }
+  btn.disabled=false; btn.innerHTML='Generate with AI ↗';
+}
+
+async function genAllAI() {
+  const n = parseInt(document.getElementById('b-qcount').value)||5;
+  const subject = getSubject();
+  const ks = document.getElementById('b-ks').value;
+  const topic = document.getElementById('b-topic').value||'';
+  const btn = document.getElementById('btnGenAll');
+  btn.disabled=true; btn.innerHTML=`<span class="spinner"></span>Generating ${n} questions…`;
+  const prompt = `Generate exactly ${n} varied quiz questions for ${ks} ${subject}${topic?' on topic: '+topic:''}.
+Mix question types. Respond ONLY with a JSON array, no markdown:
+[
+  {"type":"mcq","text":"…","options":["…","…","…","…"],"correct":0,"marks":1,"topic":"${topic||subject}"},
+  {"type":"openended","text":"…","markScheme":"key points for 4 marks","marks":4,"topic":"${topic||subject}"},
+  {"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"${topic||subject}"},
+  {"type":"multiselect","text":"…","options":["…","…","…","…"],"correct":[0,2],"marks":2,"topic":"${topic||subject}"},
+  {"type":"grid","text":"Match each…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"}],"marks":2,"topic":"${topic||subject}"},
+  {"type":"gridradio","text":"Rate each topic…","rows":["Topic A","Topic B","Topic C"],"cols":["1","2","3","4","5"],"correct":{"0":2,"1":3,"2":4},"marks":3,"topic":"${topic||subject}"},
+  {"type":"gridcheck","text":"Tick all that apply for each…","rows":["Plant cell","Animal cell"],"cols":["Nucleus","Cell wall","Chloroplast","Mitochondria"],"correct":{"0":[0,1,2,3],"1":[0,3]},"marks":4,"topic":"${topic||subject}"}
+]
+Generate ${n} questions total with varied types and difficulty.`;
+  try {
+    const raw = await callClaude(prompt, 2000);
+    const arr = JSON.parse(raw);
+    arr.forEach((q,i) => { if(q.text) builderQs.push({id:Date.now()+i,ks,...q}); });
+    renderBank();
+  } catch(e) { alert('Bulk generation failed. Try again.'); }
+  btn.disabled=false; btn.innerHTML='AI generate all ↗';
+}
+
+// ═══════════════════════════════════════════════
+// SAVE / PUBLISH QUIZ
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// API KEY MANAGEMENT
+// ═══════════════════════════════════════════════
+const API_KEY_STORAGE = 'quizcraft_api_key';
+
+function loadApiKey() {
+  try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch(e) { return ''; }
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { setApiKeyStatus('Please enter a key first.', 'var(--red)'); return; }
+  if (!key.startsWith('sk-ant-')) { setApiKeyStatus('Key should start with sk-ant-…', 'var(--amber)'); return; }
+  try {
+    localStorage.setItem(API_KEY_STORAGE, key);
+    setApiKeyStatus('✓ Key saved. It will be embedded in all downloaded quiz files automatically.', 'var(--accent)');
+    // Hide warning on student page if visible
+    const warn = document.getElementById('apiKeyWarning');
+    if (warn) warn.style.display = 'none';
+  } catch(e) { setApiKeyStatus('Could not save — storage unavailable.', 'var(--red)'); }
+}
+
+function clearApiKey() {
+  if (!confirm('Clear the saved API key?')) return;
+  try {
+    localStorage.removeItem(API_KEY_STORAGE);
+    document.getElementById('apiKeyInput').value = '';
+    setApiKeyStatus('Key cleared.', 'var(--ink3)');
+  } catch(e) {}
+}
+
+function setApiKeyStatus(msg, color) {
+  const el = document.getElementById('apiKeyStatus');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--ink3)'; }
+}
+
+function toggleApiKeyVisibility() {
+  const input = document.getElementById('apiKeyInput');
+  const btn = document.getElementById('btnToggleKey');
+  if (!input) return;
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+  else { input.type = 'password'; btn.textContent = 'Show'; }
+}
+
+function initApiKeyUI() {
+  const key = loadApiKey();
+  const input = document.getElementById('apiKeyInput');
+  if (input && key) {
+    input.value = key;
+    setApiKeyStatus('✓ API key loaded — embedded automatically in all downloaded quiz files.', 'var(--accent)');
+  }
+}
+
+function saveQuiz(status) {
+  const title = document.getElementById('b-title').value.trim() || 'Untitled Quiz';
+  const subject = getSubject();
+  const ks = document.getElementById('b-ks').value;
+  const cls = document.getElementById('b-class').value.trim();
+  if (!builderQs.length) { alert('Add at least one question.'); return; }
+  const quiz = {
+    id: 'qz-' + Date.now(),
+    title, subject, ks, cls,
+    status,
+    questions: JSON.parse(JSON.stringify(builderQs)),
+    createdAt: new Date().toLocaleDateString('en-GB'),
+    submissions: simulateSubmissions(builderQs, status)
+  };
+  quizzes.push(quiz);
+  builderQs = [];
+  renderBank();
+  updateOverview();
+  refreshAllSelects();
+  persistQuizzes();
+  alert(`Quiz "${title}" ${status==='live'?'published':'saved as draft'} successfully!`);
+  nav('quizzes');
+}
+
+function refreshAllSelects() {
+  const monSel = document.getElementById('monitorQuizSelect');
+  if (monSel) {
+    const prev = monSel.value;
+    monSel.innerHTML = '<option value="">— choose a quiz —</option>' + quizzes.filter(q=>q.status==='live').map(q=>`<option value="${q.id}">${q.title}</option>`).join('');
+    if (prev) monSel.value = prev;
+  }
+  const anSel = document.getElementById('analyticsQuizSelect');
+  if (anSel) {
+    const prev = anSel.value;
+    anSel.innerHTML = '<option value="">— choose a quiz —</option>' + quizzes.map(q=>`<option value="${q.id}">${q.title} (${(q.submissions||[]).length} sub.)</option>`).join('');
+    if (prev) anSel.value = prev;
+  }
+  const stSel = document.getElementById('studentQuizSelect');
+  if (stSel) {
+    const prev = stSel.value;
+    stSel.innerHTML = '<option value="">— choose —</option>' + quizzes.filter(q=>q.status==='live').map(q=>`<option value="${q.id}">${q.title} · ${q.subject}</option>`).join('');
+    if (prev) stSel.value = prev;
+  }
+  const iaSel = document.getElementById('inappQuizSelect');
+  if (iaSel) {
+    const prev = iaSel.value;
+    iaSel.innerHTML = '<option value="">— choose a published quiz —</option>' + quizzes.filter(q=>q.status==='live').map(q=>`<option value="${q.id}">${q.title} · ${q.subject}</option>`).join('');
+    if (prev) iaSel.value = prev;
+  }
+}
+
+function simulateSubmissions(qs, status) {
+  if (status !== 'live') return [];
+  const names = ['Amara Osei','Ben Carter','Chloe Davies','David Mensah','Emma Wilson','Fatima Ali','George Brown','Hannah Lee','Ibrahim Nkosi','Jasmine Park'];
+  const count = Math.floor(Math.random()*6)+2;
+  return names.slice(0,count).map(name => {
+    const answers = {};
+    let earned = 0, possible = 0;
+    qs.forEach(q => {
+      possible += q.marks;
+      if (q.type==='mcq') {
+        const a = Math.random()>0.35 ? q.correct : Math.floor(Math.random()*(q.options?.length||4));
+        answers[q.id]=a;
+        if (a===q.correct) earned+=q.marks;
+      } else if (q.type==='multiselect') {
+        answers[q.id]=q.correct||[0];
+        earned+=q.marks;
+      } else if (q.type==='gapfill') {
+        const correct = Math.random()>0.4;
+        answers[q.id]=correct?(q.answers||[]):(q.answers||[]).map(()=>'wrong');
+        if(correct) earned+=q.marks;
+      } else if (q.type==='openended') {
+        const m = Math.floor(Math.random()*(q.marks+1));
+        answers[q.id]='Sample student response for marking.';
+        answers[q.id+'_marks']=m;
+        earned+=m;
+      } else if (q.type==='grid') {
+        answers[q.id]=(q.pairs||[]).map(p=>Math.random()>0.4?p.term:'wrong');
+        const correct = answers[q.id].filter((a,i)=>a===(q.pairs||[])[i]?.term).length;
+        earned+=q.marks*(correct/(q.pairs?.length||1));
+      } else {
+        answers[q.id]=3; earned+=q.marks;
+      }
+    });
+    return { name, answers, earned: Math.round(earned*10)/10, possible, pct: Math.round(earned/possible*100), submittedAt: new Date().toISOString() };
+  });
+}
+
+// ═══════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════
+function updateOverview() {
+  document.getElementById('stat-quizzes').textContent = quizzes.length;
+  const live = quizzes.filter(q=>q.status==='live').length;
+  document.getElementById('stat-live').textContent = live;
+  const allSubs = quizzes.flatMap(q=>q.submissions||[]);
+  document.getElementById('stat-submissions').textContent = allSubs.length;
+  const avg = allSubs.length ? Math.round(allSubs.reduce((s,r)=>s+r.pct,0)/allSubs.length) : null;
+  document.getElementById('stat-avg').textContent = avg ? avg+'%' : '—';
+
+  const rec = document.getElementById('overview-recent');
+  if (!quizzes.length) { rec.innerHTML='<div class="empty">No quizzes yet.</div>'; }
+  else {
+    rec.innerHTML = quizzes.slice(-5).reverse().map(q=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--paper3)">
+        <div>
+          <div style="font-size:13px;font-weight:500">${q.title}</div>
+          <div style="font-size:11px;color:var(--ink3)">${q.subject} · ${q.ks} · ${q.createdAt}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge ${q.status==='live'?'badge-green':q.status==='closed'?'badge-gray':'badge-amber'}">${q.status}</span>
+          <span style="font-size:11px;color:var(--ink3)">${(q.submissions||[]).length} sub.</span>
+        </div>
+      </div>`).join('');
+  }
+  drawActivityChart();
+}
+
+let actChart = null;
+function drawActivityChart() {
+  const ctx = document.getElementById('activity-chart');
+  if (!ctx) return;
+  const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const data = quizzes.flatMap(q=>q.submissions||[]).reduce((acc,s)=>{ acc[Math.floor(Math.random()*7)]++; return acc; }, [0,0,0,0,0,0,0]);
+  if (actChart) actChart.destroy();
+  actChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{label:'Submissions', data, backgroundColor:'rgba(45,90,61,0.7)', borderRadius:4, borderSkipped:false}]}, options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'}}, x:{grid:{display:false}}}, responsive:true, maintainAspectRatio:false }});
+}
+
+// ═══════════════════════════════════════════════
+// QUIZ TABLE
+// ═══════════════════════════════════════════════
+function renderQuizTable() {
+  const tbody = document.getElementById('quizTableBody');
+  if (!quizzes.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">No quizzes yet.</td></tr>'; return; }
+  tbody.innerHTML = quizzes.map(q=>`
+    <tr>
+      <td><strong style="font-size:13px">${q.title}</strong>${q.cls?`<div style="font-size:11px;color:var(--ink3)">${q.cls}</div>`:''}</td>
+      <td>${q.subject}</td>
+      <td>${q.ks}</td>
+      <td>${q.questions.length}</td>
+      <td><span class="badge ${q.status==='live'?'badge-green':q.status==='closed'?'badge-gray':'badge-amber'}">${q.status}</span></td>
+      <td>${(q.submissions||[]).length}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          ${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="publishQuiz('${q.id}')">Publish</button>`:''}
+          ${q.status==='live'?`<button class="btn btn-sm" onclick="closeQuiz('${q.id}')">Close</button>`:''}
+          <button class="btn btn-sm" onclick="nav('analytics');document.getElementById('analyticsQuizSelect').value='${q.id}';loadAnalytics()">Analytics</button>
+          <button class="btn btn-sm btn-red" onclick="deleteQuiz('${q.id}')">Delete</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function publishQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q){q.status='live';q.submissions=simulateSubmissions(q.questions,'live');} renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
+function closeQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q) q.status='closed'; renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
+function deleteQuiz(id) { if(confirm('Delete this quiz?')){ quizzes=quizzes.filter(q=>q.id!==id); renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); } }
+
+// ═══════════════════════════════════════════════
+// LIVE MONITOR
+// ═══════════════════════════════════════════════
+function populateMonitorSelect() { refreshAllSelects(); }
+function populateAnalyticsSelect() { refreshAllSelects(); }
+function populateStudentSelect() {
+  refreshAllSelects();
+  // Show warning banner if no API key is set
+  const warn = document.getElementById('apiKeyWarning');
+  if (warn) warn.style.display = loadApiKey() ? 'none' : 'block';
+}
+
+function loadMonitor() {
+  const id = document.getElementById('monitorQuizSelect').value;
+  const q = quizzes.find(q=>q.id===id);
+  const stats = document.getElementById('monitorStats');
+  const list = document.getElementById('monitorStudentList');
+  if (!q) { stats.style.display='none'; list.innerHTML='<div class="empty">Select a quiz.</div>'; return; }
+  stats.style.display='block';
+  const subs = q.submissions||[];
+  document.getElementById('mon-submitted').textContent = subs.length;
+  document.getElementById('mon-inprogress').textContent = Math.floor(Math.random()*3);
+  if (!subs.length) { list.innerHTML='<div class="empty">No submissions yet.</div>'; return; }
+  list.innerHTML = subs.map(s=>`
+    <div class="student-row">
+      <div class="avatar">${s.name.split(' ').map(n=>n[0]).join('')}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${s.name}</div>
+        <div style="font-size:11px;color:var(--ink3)">${s.pct}% · ${s.earned}/${s.possible} marks</div>
+      </div>
+      <div class="progress-bar-wrap" style="max-width:100px">
+        <div class="progress-bar" style="width:${s.pct}%"></div>
+      </div>
+      <span class="badge badge-green" style="min-width:52px;text-align:center">${s.pct}%</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════
+let charts = {};
+function loadAnalytics() {
+  const id = document.getElementById('analyticsQuizSelect').value;
+  const q = quizzes.find(q=>q.id===id);
+  const area = document.getElementById('analyticsArea');
+  if (!q || !(q.submissions||[]).length) { area.innerHTML='<div class="empty">No submissions for this quiz yet.</div>'; return; }
+  const subs = q.submissions;
+  const avg = Math.round(subs.reduce((s,r)=>s+r.pct,0)/subs.length);
+  const grade = getGrade(avg, q.ks);
+  const gradeDist = {};
+  subs.forEach(s=>{ const g=getGrade(s.pct,q.ks)[0]; gradeDist[g]=(gradeDist[g]||0)+1; });
+  const qDiff = q.questions.map((qu,i)=>{
+    let correct=0;
+    subs.forEach(s=>{
+      if(qu.type==='mcq'&&s.answers[qu.id]===qu.correct) correct++;
+      else if(qu.type==='openended'&&(s.answers[qu.id+'_marks']||0)>0) correct++;
+      else if(qu.type==='gapfill'&&JSON.stringify(s.answers[qu.id])===JSON.stringify(qu.answers)) correct++;
+      else if(qu.type!=='survey') correct+=0.5;
+    });
+    return { label:'Q'+(i+1), pct:Math.round(correct/subs.length*100) };
+  });
+
+  area.innerHTML = `
+    <div class="grid4" style="margin-bottom:20px">
+      <div class="stat-tile"><div class="stat-val">${subs.length}</div><div class="stat-lbl">Submissions</div></div>
+      <div class="stat-tile"><div class="stat-val">${avg}%</div><div class="stat-lbl">Class average</div></div>
+      <div class="stat-tile"><div class="stat-val ${`grade-${grade[0]}`}">${grade}</div><div class="stat-lbl">Avg grade</div></div>
+      <div class="stat-tile"><div class="stat-val">${Math.max(...subs.map(s=>s.pct))}%</div><div class="stat-lbl">Highest score</div></div>
+    </div>
+
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">Grade distribution</div>
+        <canvas id="gradeChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Per-question success rate</div>
+        <canvas id="diffChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">Individual student results</div>
+        <table class="tbl">
+          <thead><tr><th>Student</th><th>Score</th><th>%</th><th>Grade</th></tr></thead>
+          <tbody>${subs.sort((a,b)=>b.pct-a.pct).map(s=>`
+            <tr>
+              <td>${s.name}</td>
+              <td>${s.earned}/${s.possible}</td>
+              <td>${s.pct}%</td>
+              <td><span class="badge ${gradeBadgeClass(getGrade(s.pct,q.ks))}">${getGrade(s.pct,q.ks)}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Topic weakness heatmap</div>
+        <div id="heatmapArea"></div>
+      </div>
+    </div>`;
+
+  const gradeKeys = ['A*','A','B','C','D','E','U'];
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (charts.grade) { charts.grade.destroy(); charts.grade = null; }
+    const gc = document.getElementById('gradeChart');
+    if (gc) charts.grade = new Chart(gc, { type:'doughnut', data:{ labels:gradeKeys, datasets:[{data:gradeKeys.map(g=>gradeDist[g]||0), backgroundColor:['#2d5a3d','#4a8c60','#1a4a7a','#9a6800','#c05a00','#b03a2e','#8a8480'], borderWidth:0}]}, options:{plugins:{legend:{position:'right',labels:{font:{size:12}}}}, cutout:'60%', responsive:true, maintainAspectRatio:false}});
+
+    if (charts.diff) { charts.diff.destroy(); charts.diff = null; }
+    const dc = document.getElementById('diffChart');
+    if (dc) charts.diff = new Chart(dc, { type:'bar', data:{ labels:qDiff.map(q=>q.label), datasets:[{label:'Success %', data:qDiff.map(q=>q.pct), backgroundColor:qDiff.map(q=>q.pct>=70?'rgba(45,90,61,0.7)':q.pct>=40?'rgba(154,104,0,0.7)':'rgba(176,58,46,0.7)'), borderRadius:4, borderSkipped:false}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}, responsive:true, maintainAspectRatio:false}});
+
+    const topics = [...new Set(q.questions.map(qu=>qu.topic||q.subject))];
+    const hmArea = document.getElementById('heatmapArea');
+    if (hmArea) {
+      hmArea.innerHTML = topics.map(t=>{
+        const topicQs = q.questions.filter(qu=>(qu.topic||q.subject)===t);
+        const topicPct = topicQs.length ? Math.round(topicQs.map(qu=>qDiff.find(d=>d.label==='Q'+(q.questions.indexOf(qu)+1))?.pct||50).reduce((a,b)=>a+b,0)/topicQs.length) : 50;
+        const bg = topicPct>=70?'#e8f2ec':topicPct>=40?'#fef3d8':'#fbeae8';
+        const col = topicPct>=70?'#2d5a3d':topicPct>=40?'#9a6800':'#b03a2e';
+        return `<div class="hm-cell" style="background:${bg};color:${col};display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;border-radius:var(--r)">
+          <span>${t}</span><strong>${topicPct}%</strong></div>`;
+      }).join('') || '<div class="empty">No topic data.</div>';
+    }
+  }));
+}
+
+function gradeBadgeClass(g) {
+  if(g.startsWith('A')) return 'badge-green';
+  if(g.startsWith('B')) return 'badge-blue';
+  if(g.startsWith('C')) return 'badge-amber';
+  return 'badge-red';
+}
+
+function getGrade(pct, ks) {
+  if ((ks||'').includes('GCSE')||(ks||'').includes('IGCSE')) {
+    if(pct>=85)return'A* (9)'; if(pct>=75)return'A (7-8)'; if(pct>=65)return'B (6)';
+    if(pct>=55)return'C (5)'; if(pct>=45)return'D (4)'; if(pct>=35)return'E (3)'; return'U';
+  }
+  if(pct>=90)return'A*'; if(pct>=80)return'A'; if(pct>=70)return'B'; if(pct>=60)return'C'; if(pct>=50)return'D'; if(pct>=40)return'E'; return'U';
+}
+
+// ═══════════════════════════════════════════════
+// STUDENT QUIZ PLAYER
+// ═══════════════════════════════════════════════
+function previewStudentLink() {
+  const id = document.getElementById('studentQuizSelect').value;
+  const preview = document.getElementById('studentLinkPreview');
+  const btnDl = document.getElementById('btnDownloadQuiz');
+  const btnPv = document.getElementById('btnPreviewQuiz');
+  if (!id) { preview.style.display='none'; btnDl.disabled=true; btnPv.disabled=true; return; }
+  const q = quizzes.find(q=>q.id===id);
+  if (!q) return;
+  preview.style.display='block'; btnDl.disabled=false; btnPv.disabled=false;
+  document.getElementById('studentLinkMeta').innerHTML = `<strong>${q.title}</strong><br>Subject: ${q.subject} &nbsp;·&nbsp; Level: ${q.ks}${q.cls?' &nbsp;·&nbsp; Class: '+q.cls:''}<br>Questions: ${q.questions.length} &nbsp;·&nbsp; Total marks: ${q.questions.reduce((s,qu)=>s+qu.marks,0)}`;
+}
+
+// Pre-generate all SVG illustrations for a quiz, storing them on q._svg
+async function pregenerateSVGs(quiz, statusEl) {
+  for (let i = 0; i < quiz.questions.length; i++) {
+    const q = quiz.questions[i];
+    if (q._svg) continue; // already cached
+    if (statusEl) statusEl.textContent = 'Generating illustration ' + (i+1) + ' of ' + quiz.questions.length + '…';
+    if (q.customImage) {
+      q._svg = '<svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"><image href="' + q.customImage + '" x="0" y="0" width="760" height="160" preserveAspectRatio="xMidYMid meet"/></svg>';
+      continue;
+    }
+    const prompt = 'Create an educational SVG illustration that contextualises the subject area for a '
+      + quiz.ks + ' ' + quiz.subject + ' question. '
+      + 'Topic: ' + (q.topic || quiz.subject) + '. '
+      + 'Illustrate the setting or domain only — never reveal or hint at the answer. '
+      + 'Output ONLY the raw SVG element, nothing else. '
+      + 'Opening tag exactly: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> '
+      + 'First child: <rect width="760" height="160" fill="#faf9f6"/> '
+      + 'Muted palette, text labels in #555, font-family="sans-serif" size 12-13px. '
+      + '3-5 elements. No <image>, no <foreignObject>.';
+    try {
+      const raw = await callClaude(prompt, 1800);
+      const m = raw.match(/<svg[\s\S]+?<\/svg>/i);
+      q._svg = m ? m[0] : null;
+    } catch(e) { q._svg = null; }
+  }
+  if (statusEl) statusEl.textContent = '';
+}
+
+async function previewAsStudent() {
+  const id = document.getElementById('studentQuizSelect').value;
+  if (!id) return;
+  const btn = document.getElementById('btnPreviewQuiz');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Generating illustrations…';
+
+  activeQuiz = quizzes.find(q=>q.id===id);
+  studentAnswers = {}; aiMarkingStore = {};
+  studentName = document.getElementById('studentName').value.trim() || 'Student';
+
+  await pregenerateSVGs(activeQuiz, null);
+  persistQuizzes(); // cache SVGs to DB
+
+  btn.disabled = false; btn.textContent = origText;
+  renderStudentQuiz();
+  document.getElementById('quizOverlay').classList.add('open');
+}
+
+async function downloadStudentQuiz() {
+  const id = document.getElementById('studentQuizSelect').value;
+  if (!id) return;
+  const quiz = quizzes.find(q=>q.id===id);
+  if (!quiz) return;
+
+  const btn = document.getElementById('btnDownloadQuiz');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Generating illustrations…';
+
+  await pregenerateSVGs(quiz, btn);
+  persistQuizzes(); // cache SVGs to DB
+
+  btn.disabled = false; btn.textContent = origText;
+
+  const html = buildStandaloneQuizHTML(quiz);
+  const filename = quiz.title.replace(/[^a-zA-Z0-9]/g,'_') + '_student_quiz.html';
+
+  // Strategy 1: Blob URL
+  try {
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    return;
+  } catch(e) {}
+
+  // Strategy 2: data URI
+  try {
+    const a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    return;
+  } catch(e) {}
+
+  // Strategy 3: new tab with save prompt
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html); w.document.close(); w.document.title = filename;
+    const banner = w.document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1a1814;color:#fff;padding:10px 20px;font-family:sans-serif;font-size:13px;z-index:9999;display:flex;justify-content:space-between;align-items:center';
+    banner.innerHTML = '<span>Press <strong>Ctrl+S</strong> (Cmd+S on Mac) to save as <strong>' + filename + '</strong></span><button onclick="this.parentNode.remove()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer">✕</button>';
+    w.document.body.prepend(banner);
+  } else {
+    alert('Download blocked. Please allow pop-ups and try again.');
+  }
+}
+
+function buildStandaloneQuizHTML(quiz) {
+  // Embed pre-generated SVGs directly — no API calls needed in standalone file
+  const safeQs = quiz.questions.map(q => {
+    const s = Object.assign({}, q);
+    // Keep _svg (pre-generated), drop internal-only fields
+    delete s.customImage;
+    delete s._defList;
+    return s;
+  });
+  const qJson = JSON.stringify(safeQs).replace(/<\/script>/gi, '<\\/script>');
+  const meta = JSON.stringify({ title: quiz.title, subject: quiz.subject, ks: quiz.ks, cls: quiz.cls || '' });
+  const safeTitle = (quiz.title || 'Quiz').replace(/[<>"']/g, '');
+
+  const lines = [];
+  lines.push('<!DOCTYPE html>');
+  lines.push('<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">');
+  lines.push('<title>' + safeTitle + ' \u2014 Student Quiz</title>');
+  lines.push('<style>');
+  lines.push('*{box-sizing:border-box;margin:0;padding:0}');
+  lines.push('body{font-family:Georgia,serif;background:#f2f0eb;color:#1a1814;min-height:100vh}');
+  lines.push('.hdr{background:#1a1814;color:#fff;padding:16px 24px;position:sticky;top:0;z-index:10}');
+  lines.push('.hdr h1{font-size:18px;font-weight:400}.hdr p{font-size:12px;opacity:.5;margin-top:2px}');
+  lines.push('.wrap{max-width:700px;margin:0 auto;padding:24px 20px 60px}');
+  lines.push('.card{background:#faf9f6;border:1px solid #d8d4cc;border-radius:10px;padding:20px;margin-bottom:16px}');
+  lines.push('input[type=text],textarea,select{width:100%;padding:8px 10px;border:1px solid #d8d4cc;border-radius:6px;font-family:inherit;font-size:13px;background:#faf9f6;color:#1a1814;outline:none}');
+  lines.push('textarea{resize:vertical;line-height:1.6}');
+  lines.push('.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #d8d4cc;background:#faf9f6;color:#1a1814;transition:all .15s}');
+  lines.push('.btn-p{background:#2d5a3d;color:#fff;border-color:#2d5a3d}.btn:hover{opacity:.85}.btn:active{transform:scale(.98)}');
+  lines.push('.qopt{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #d8d4cc;border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:13px;background:#faf9f6;user-select:none;transition:all .12s}');
+  lines.push('.qopt:hover{background:#f2f0eb}.qopt.sel{border-color:#1a1814;background:#e8e4dc;font-weight:500}');
+  lines.push('.qopt.ok{border-color:#2d5a3d;background:#e8f2ec;color:#2d5a3d}.qopt.bad{border-color:#b03a2e;background:#fbeae8;color:#b03a2e}');
+  lines.push('.ol{font-size:11px;font-weight:500;color:#8a8480;min-width:18px}');
+  lines.push('.gi{border:none;border-bottom:1.5px solid #1a1814;border-radius:0;padding:1px 6px;min-width:90px;font-size:14px;font-family:inherit;background:transparent;color:#1a1814;display:inline-block;width:auto}');
+  lines.push('.hr{border:none;border-top:1px solid #e8e4dc;margin:18px 0}');
+  lines.push('.qimg{display:block;width:100%;pointer-events:none;user-select:none;border-radius:6px;border:1px solid #d8d4cc;margin-bottom:8px}');
+  lines.push('.gr-wrap{background:#f2f0eb;border:1px solid #d8d4cc;border-radius:6px;min-height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}');
+  lines.push('.gr-wrap svg{width:100%;max-height:170px;display:block}');
+  lines.push('.fb{margin-top:8px;padding:10px 14px;border-radius:6px;font-size:13px;line-height:1.6;border-left:3px solid #ccc;background:#f2f0eb}');
+  lines.push('.fb-ok{border-left-color:#2d5a3d;background:#e8f2ec;color:#2d5a3d}');
+  lines.push('.fb-bad{border-left-color:#b03a2e;background:#fbeae8;color:#b03a2e}');
+  lines.push('.spin{display:inline-block;width:13px;height:13px;border:2px solid #d8d4cc;border-top-color:#1a1814;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:5px}');
+  lines.push('@keyframes sp{to{transform:rotate(360deg)}}');
+  lines.push('.res{background:#1a1814;color:#fff;padding:28px;text-align:center;border-radius:10px;margin-bottom:24px}');
+  lines.push('.gA{color:#4a8c60}.gB{color:#1a4a7a}.gC{color:#9a6800}.gD{color:#c05a00}.gE,.gU{color:#b03a2e}');
+  lines.push('</style></head><body>');
+  lines.push('<div class="hdr"><h1 id="qt"></h1><p id="qm"></p></div>');
+  lines.push('<div class="wrap">');
+  lines.push('  <div class="card" id="nc">');
+  lines.push('    <p style="font-size:14px;margin-bottom:12px">Please enter your full name to begin.</p>');
+  lines.push('    <input type="text" id="sn" placeholder="Your full name" style="max-width:280px;margin-bottom:12px"><br>');
+  lines.push('    <button class="btn btn-p" onclick="begin()">Begin quiz</button>');
+  lines.push('  </div>');
+  lines.push('  <div id="qa" style="display:none"></div>');
+  lines.push('  <div id="sr" style="display:none;margin-top:8px"><button class="btn btn-p" onclick="doSubmit()">Submit &amp; get results</button></div>');
+  lines.push('</div>');
+  lines.push('<script>');
+  lines.push('var Q=' + qJson + ';');
+  lines.push('var M=' + meta + ';');
+  // Embed the proxy URL so standalone student files use the secure server-side proxy
+  const hostedProxyUrl = (location.hostname === 'localhost' || location.protocol === 'file:')
+    ? '' // will fall back to direct with embedded key
+    : (location.origin + '/api/claude');
+  lines.push('var API_KEY=' + JSON.stringify(loadApiKey()) + ';');
+  lines.push('var PROXY_URL=' + JSON.stringify(hostedProxyUrl || '') + ';');
+  lines.push('var A={},SN="";');
+  lines.push('document.getElementById("qt").textContent=M.title;');
+  lines.push('document.getElementById("qm").textContent=M.subject+" \xb7 "+M.ks+(M.cls?" \xb7 "+M.cls:"");');
+  lines.push('function begin(){SN=document.getElementById("sn").value.trim();if(!SN){alert("Please enter your name.");return;}document.getElementById("nc").style.display="none";renderQ();document.getElementById("qa").style.display="block";document.getElementById("sr").style.display="block";}');
+  lines.push('function wT(ctx,t,mw,fs){ctx.font="400 "+fs+"px Georgia,serif";var ws=t.split(" "),ls=[],c="";ws.forEach(function(w){var tt=c?c+" "+w:w;if(ctx.measureText(tt).width>mw){if(c)ls.push(c);c=w;}else c=tt;});if(c)ls.push(c);return ls;}');
+  lines.push('function mkI(q,i){var cv=document.createElement("canvas"),W=800,pd=26;cv.width=W;var ctx=cv.getContext("2d");var b="Q"+(i+1)+" \xb7 "+q.marks+" mark"+(q.marks>1?"s":"")+" \xb7 "+M.ks+" \xb7 "+M.subject+(q.topic?" \xb7 "+q.topic:"");var ls=wT(ctx,q.text,W-pd*2,17),H=pd+20+12+ls.length*27+pd;cv.height=H;ctx.fillStyle="#faf9f6";ctx.fillRect(0,0,W,H);ctx.fillStyle="#1a1814";ctx.fillRect(0,0,W,4);ctx.font="500 11px sans-serif";ctx.fillStyle="#8a8480";ctx.fillText(b,pd,pd+12);ctx.font="400 17px Georgia,serif";ctx.fillStyle="#1a1814";ls.forEach(function(l,i){ctx.fillText(l,pd,pd+20+12+i*27+16);});return cv.toDataURL("image/png");}');
+  lines.push('function wT(ctx,t,mw,fs){ctx.font="400 "+fs+"px Georgia,serif";var ws=t.split(" "),ls=[],c="";ws.forEach(function(w){var tt=c?c+" "+w:w;if(ctx.measureText(tt).width>mw){if(c)ls.push(c);c=w;}else c=tt;});if(c)ls.push(c);return ls;}');
+  lines.push('function mkI(q,i){var cv=document.createElement("canvas"),W=800,pd=26;cv.width=W;var ctx=cv.getContext("2d");var b="Q"+(i+1)+" \xb7 "+q.marks+" mark"+(q.marks>1?"s":"")+" \xb7 "+M.ks+" \xb7 "+M.subject+(q.topic?" \xb7 "+q.topic:"");var ls=wT(ctx,q.text,W-pd*2,17),H=pd+20+12+ls.length*27+pd;cv.height=H;ctx.fillStyle="#faf9f6";ctx.fillRect(0,0,W,H);ctx.fillStyle="#1a1814";ctx.fillRect(0,0,W,4);ctx.font="500 11px sans-serif";ctx.fillStyle="#8a8480";ctx.fillText(b,pd,pd+12);ctx.font="400 17px Georgia,serif";ctx.fillStyle="#1a1814";ls.forEach(function(l,i){ctx.fillText(l,pd,pd+20+12+i*27+16);});return cv.toDataURL("image/png");}');
+  // SVGs are pre-generated and embedded in q._svg — no API calls in standalone
+  lines.push('function renderQ(){var h="";Q.forEach(function(q,i){var img=mkI(q,i);var qid=String(q.id).replace(/[^a-zA-Z0-9]/g,"_");q._sid=qid;h+="<div style=\\"margin-bottom:28px\\">";if(q._svg){h+="<div class=\\"gr-wrap\\" style=\\"min-height:0\\">"+q._svg+"</div>";}h+="<img class=\\"qimg\\" src=\\""+img+"\\" draggable=\\"false\\">";if(q.type==="mcq"){(q.options||[]).forEach(function(o,oi){h+="<div class=\\"qopt\\" id=\\"op"+qid+oi+"\\" onclick=\\"sM(\x27"+qid+"\x27,"+oi+")\\"><span class=\\"ol\\">"+(["A","B","C","D"][oi])+"</span>"+o+"</div>";});h+="<div id=\\"fb"+qid+"\\"></div>";}else if(q.type==="multiselect"){(q.options||[]).forEach(function(o,oi){h+="<div class=\\"qopt\\" id=\\"op"+qid+oi+"\\" onclick=\\"tM(\x27"+qid+"\x27,"+oi+")\\"><span class=\\"ol\\">"+(["A","B","C","D"][oi])+"</span>"+o+"</div>";});h+="<div id=\\"fb"+qid+"\\"></div>";}else if(q.type==="gapfill"){var g=q.text,n=(q.text.match(/___/g)||[]).length;for(var b=0;b<n;b++)g=g.replace("___","<input class=\\\"gi\\\" id=\\\"gp"+qid+b+"\\\" placeholder=\\\"\u2026\\\" oninput=\\\"sG(\x27"+qid+"\x27)\\\" />");h+="<div style=\\"line-height:2.4;font-size:15px;margin-top:8px\\">"+g+"</div>";h+="<div id=\\"fb"+qid+"\\"></div>";}else if(q.type==="openended"){h+="<textarea id=\\"oe"+qid+"\\" rows=\\"4\\" style=\\"width:100%;margin-top:8px\\" placeholder=\\"Write your answer here\u2026\\" oninput=\\"A[\x27"+qid+"\x27]=this.value\\"></textarea>";h+="<div id=\\"ai"+qid+"\\"></div>";}else if(q.type==="survey"){A[qid]=3;h+="<div style=\\"margin-top:10px\\">"+"<div style=\\"display:flex;justify-content:space-between;font-size:12px;color:#8a8480;margin-bottom:4px\\"><span>"+(q.scaleMin||"Strongly disagree")+"</span><span>"+(q.scaleMax||"Strongly agree")+"</span></div>"+"<input type=\\"range\\" min=\\"1\\" max=\\"5\\" value=\\"3\\" style=\\"width:100%\\" oninput=\\"A[\x27"+qid+"\x27]=parseInt(this.value)\\" />"+"<div style=\\"display:flex;justify-content:space-between;font-size:11px;color:#8a8480;margin-top:2px\\"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div></div>";h+="<div id=\\"fb"+qid+"\\"></div>";}else if(q.type==="grid"){var gDefs=(q.pairs||[]).map(function(p){return p.def;});var gSh=gDefs.slice().sort(function(){return Math.random()-.5;});var gCor={};(q.pairs||[]).forEach(function(p,ri){gCor[ri]=gSh.indexOf(p.def);});q._gridCorrect=gCor;q._shuffledDefs=gSh;var gRws=(q.pairs||[]).map(function(p){return p.term;});h+="<div style=\\"overflow-x:auto;margin-top:10px\\"><table style=\\"width:100%;border-collapse:collapse;font-size:13px\\"><thead><tr><td style=\\"padding:6px 8px;min-width:130px;font-size:11px;font-weight:500;color:#8a8480;text-transform:uppercase\\">Term</td>";gSh.forEach(function(c){h+="<th style=\\"padding:6px 8px;text-align:center;font-weight:500;color:#4a4640;font-size:12px\\">"+c+"</th>";});h+="</tr></thead><tbody>";gRws.forEach(function(row,ri){h+="<tr style=\\"border-top:0.5px solid #e8e4dc\\" id=\\"sgrow"+qid+ri+"\\"><td style=\\"padding:8px;font-size:13px;font-weight:500\\">"+row+"</td>";gSh.forEach(function(_,ci){h+="<td style=\\"padding:8px;text-align:center\\"><input type=\\"radio\\" name=\\"sgrid"+qid+ri+"\\" value=\\""+ci+"\\" style=\\"width:16px;height:16px;cursor:pointer;accent-color:#2d5a3d\\" onchange=\\"sGM(\x27"+qid+"\x27,"+ri+","+ci+")\\" /></td>";});h+="</tr>";});h+="</tbody></table></div>";h+="<div id=\\"fb"+qid+"\\"></div>";}else if(q.type==="gridradio"||q.type==="gridcheck"){var isR=(q.type==="gridradio");var gRw=(q.rows||[]),gCl=(q.cols||[]);h+="<div style=\\"overflow-x:auto;margin-top:10px\\"><table style=\\"width:100%;border-collapse:collapse;font-size:13px\\"><thead><tr><td style=\\"padding:6px 8px;min-width:120px\\"></td>";gCl.forEach(function(c){h+="<th style=\\"padding:6px 8px;text-align:center;font-weight:500;color:#4a4640;font-size:12px\\">"+c+"</th>";});h+="</tr></thead><tbody>";gRw.forEach(function(row,ri){h+="<tr style=\\"border-top:0.5px solid #e8e4dc\\" id=\\"sgrow"+qid+ri+"\\"><td style=\\"padding:8px;font-size:13px\\">"+row+"</td>";gCl.forEach(function(_,ci){var oc=isR?"sGR(\x27"+qid+"\x27,"+ri+","+ci+")":"sGC(\x27"+qid+"\x27,"+ri+","+ci+")";h+="<td style=\\"padding:8px;text-align:center\\"><input type=\\""+(isR?"radio":"checkbox")+"\\" name=\\"sgrid"+qid+ri+"\\" value=\\""+ci+"\\" style=\\"width:16px;height:16px;cursor:pointer;accent-color:#2d5a3d\\" onchange=\\""+oc+"\\" /></td>";});h+="</tr>";});h+="</tbody></table></div>";h+="<div id=\\"fb"+qid+"\\"></div>";}h+="<div class=\\"hr\\"></div>";});document.getElementById("qa").innerHTML=h;}');
+  lines.push('function sGM(qid,ri,ci){if(!A[qid])A[qid]={};A[qid][ri]=ci;}');
+  lines.push('function sM(qid,oi){A[qid]=oi;var q=Q.find(function(q){return (q._sid||String(q.id).replace(/[^a-zA-Z0-9]/g,"_"))===qid;});(q.options||[]).forEach(function(_,i){var el=document.getElementById("op"+qid+i);if(el)el.classList.toggle("sel",i===oi);});}');
+  lines.push('function tM(qid,oi){if(!A[qid])A[qid]=[];var i=A[qid].indexOf(oi);if(i===-1)A[qid].push(oi);else A[qid].splice(i,1);var el=document.getElementById("op"+qid+oi);if(el)el.classList.toggle("sel",A[qid].includes(oi));}');
+  lines.push('function sG(qid){var q=Q.find(function(q){return (q._sid||String(q.id).replace(/[^a-zA-Z0-9]/g,"_"))===qid;});var n=(q.text.match(/___/g)||[]).length;A[qid]=[];for(var b=0;b<n;b++){var el=document.getElementById("gp"+qid+b);A[qid].push(el?el.value.trim().toLowerCase():"");}}');
+  lines.push('function sGR(qid,ri,ci){if(!A[qid])A[qid]={};A[qid][ri]=ci;}');
+  lines.push('function sGC(qid,ri,ci){if(!A[qid])A[qid]={};if(!A[qid][ri])A[qid][ri]=[];var arr=A[qid][ri];var idx=arr.indexOf(ci);if(idx===-1)arr.push(ci);else arr.splice(idx,1);}');
+  lines.push('async function doSubmit(){document.getElementById("sr").style.display="none";var e=0,p=0;for(var qi=0;qi<Q.length;qi++){var q=Q[qi];var qid=q._sid||String(q.id).replace(/[^a-zA-Z0-9]/g,"_");p+=q.marks;var fEl=document.getElementById("fb"+qid);if(q.type==="mcq"){var mcqA=A[qid],mcqOk=mcqA===q.correct;if(mcqOk)e+=q.marks;(q.options||[]).forEach(function(_,i){var el=document.getElementById("op"+qid+i);if(el){if(i===q.correct)el.classList.add("ok");else if(i===mcqA&&!mcqOk)el.classList.add("bad");}});if(fEl)fEl.innerHTML=mcqOk?"<div class=\\"fb fb-ok\\">&#10003; Correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; Incorrect. Correct answer: <strong>"+(["A","B","C","D"][q.correct])+": "+((q.options||[])[q.correct]||"")+"</strong></div>";}else if(q.type==="multiselect"){var msA=(A[qid]||[]).map(Number).sort(),msC=(q.correct||[]).map(Number).sort(),msOk=JSON.stringify(msA)===JSON.stringify(msC);if(msOk)e+=q.marks;(q.options||[]).forEach(function(_,i){var el=document.getElementById("op"+qid+i);if(el){if(msC.includes(i))el.classList.add("ok");else if(msA.includes(i))el.classList.add("bad");}});var msLbl=msC.map(function(i){return (["A","B","C","D"][i])+": "+((q.options||[])[i]||"");}).join(", ");if(fEl)fEl.innerHTML=msOk?"<div class=\\"fb fb-ok\\">&#10003; All correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; Correct: <strong>"+msLbl+"</strong></div>";}else if(q.type==="gapfill"){var gfA=A[qid]||[],gfE=0,gfB=[];(q.answers||[]).forEach(function(ans,b){var ok=(gfA[b]||"").toLowerCase()===ans.toLowerCase();if(ok)gfE+=q.marks/(q.answers.length||1);else gfB.push("Blank "+(b+1)+": <strong>"+ans+"</strong>");var el=document.getElementById("gp"+qid+b);if(el){el.style.borderColor=ok?"#2d5a3d":"#b03a2e";el.style.color=ok?"#2d5a3d":"#b03a2e";}});e+=gfE;if(fEl)fEl.innerHTML=gfB.length===0?"<div class=\\"fb fb-ok\\">&#10003; All blanks correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; "+gfB.join(" \xb7 ")+"</div>";}else if(q.type==="grid"){var gmA=A[qid]||{},gmCor=q._gridCorrect||{},gmDefs=q._shuffledDefs||(q.pairs||[]).map(function(p){return p.def;}),gmRws=(q.pairs||[]).map(function(p){return p.term;}),gmE=0,gmM=[];gmRws.forEach(function(row,ri){var sel=gmA[ri],rc=Number(gmCor[ri]),ok=(sel!==undefined&&sel!==null)&&Number(sel)===rc;if(ok)gmE+=q.marks/(gmRws.length||1);else gmM.push("<strong>"+row+"</strong> \u2192 "+(gmDefs[rc]||"?"));var re=document.getElementById("sgrow"+qid+ri);if(re)re.style.background=ok?"#e8f2ec":"#fbeae8";});e+=gmE;if(fEl)fEl.innerHTML=gmM.length===0?"<div class=\\"fb fb-ok\\">&#10003; All matches correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; Correct: "+gmM.join(" \xb7 ")+"</div>";}else if(q.type==="gridradio"){var grA=A[qid]||{},grRw=(q.rows||[]),grCl=(q.cols||[]),grCor=(q.correct||{}),grE=0,grM=[];grRw.forEach(function(row,ri){var sel=grA[ri],rc=Number(grCor[ri]),ok=(sel!==undefined&&sel!==null)&&Number(sel)===rc;if(ok)grE+=q.marks/(grRw.length||1);else grM.push("<strong>"+row+"</strong>: "+(grCl[rc]||"?"));var re=document.getElementById("sgrow"+qid+ri);if(re)re.style.background=ok?"#e8f2ec":"#fbeae8";});e+=grE;if(fEl)fEl.innerHTML=grM.length===0?"<div class=\\"fb fb-ok\\">&#10003; All rows correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; Correct: "+grM.join(" \xb7 ")+"</div>";}else if(q.type==="gridcheck"){var gcA=A[qid]||{},gcRw=(q.rows||[]),gcCl=(q.cols||[]),gcCor=(q.correct||{}),gcE=0,gcM=[];gcRw.forEach(function(row,ri){var sel=(gcA[ri]||[]).map(Number).sort().join(","),rc=(gcCor[ri]||[]).map(Number).sort(),ok=sel===rc.join(",");if(ok)gcE+=q.marks/(gcRw.length||1);else gcM.push("<strong>"+row+"</strong>: "+rc.map(function(ci){return gcCl[ci];}).join(", "));var re=document.getElementById("sgrow"+qid+ri);if(re)re.style.background=ok?"#e8f2ec":"#fbeae8";});e+=gcE;if(fEl)fEl.innerHTML=gcM.length===0?"<div class=\\"fb fb-ok\\">&#10003; All rows correct!</div>":"<div class=\\"fb fb-bad\\">&#10007; Correct: "+gcM.join(" \xb7 ")+"</div>";}else if(q.type==="survey"){e+=q.marks;if(fEl)fEl.innerHTML="<div class=\\"fb fb-ok\\">&#10003; Response recorded. Thank you!</div>";}}var oeQs=Q.filter(function(q){return q.type==="openended";});for(var oi2=0;oi2<oeQs.length;oi2++){var oq=oeQs[oi2],oqid=oq._sid||String(oq.id).replace(/[^a-zA-Z0-9]/g,"_");var aiEl=document.getElementById("ai"+oqid);if(aiEl)aiEl.innerHTML="<div style=\\"font-size:12px;color:#8a8480;font-style:italic;margin-top:6px\\"><span class=\\"spin\\"></span>AI marking\u2026</div>";var oAns=A[oqid]||"",mk=0,fb2="No answer provided.";if(oAns.trim()){try{var pr="You are a "+M.ks+" "+M.subject+" examiner. Question ("+oq.marks+" marks): "+oq.text+" Mark scheme: "+(oq.markScheme||"Award marks for relevant, accurate points.")+" Student answer: "+oAns+" Award 0-"+oq.marks+" marks. Respond ONLY with JSON: {\\"marks\\":<n>,\\"feedback\\":\\"2-3 sentences British English\\"}";var ep=PROXY_URL||"https://api.anthropic.com/v1/messages";var hdrs={"Content-Type":"application/json"};if(!PROXY_URL&&API_KEY){hdrs["x-api-key"]=API_KEY;hdrs["anthropic-version"]="2023-06-01";hdrs["anthropic-dangerous-direct-browser-access"]="true";}var r2=await fetch(ep,{method:"POST",headers:hdrs,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,messages:[{role:"user",content:pr}]})});var d2=await r2.json();var pp=JSON.parse((d2.content||[]).map(function(c){return c.text||"";}).join("").replace(/^[\s\S]*?({[\s\S]*})[\s\S]*$/,"$1").trim());mk=Math.min(oq.marks,Math.max(0,pp.marks||0));fb2=pp.feedback||"Marked.";}catch(err){fb2="AI marking unavailable.";}}e+=mk;var ig=mk>=oq.marks*0.5;if(aiEl)aiEl.innerHTML="<div class=\\"fb "+(ig?"fb-ok":"fb-bad")+"\\">"+fb2+"</div><div style=\\"font-size:12px;font-weight:500;color:#2d5a3d;margin-top:4px\\">"+mk+"/"+oq.marks+" marks</div>";}var pct=p>0?Math.round(e/p*100):0,gr=gG(pct,M.ks),gc="g"+gr[0];var bn=document.createElement("div");bn.className="res";bn.innerHTML="<div style=\\"font-size:11px;letter-spacing:1px;opacity:.5;margin-bottom:8px\\">RESULT \u2014 "+SN+"</div><div class=\\""+gc+"\\" style=\\"font-family:Georgia,serif;font-size:58px;line-height:1\\">"+gr+"</div><div style=\\"font-size:22px;margin-top:8px;opacity:.8\\">"+pct+"%</div><div style=\\"font-size:13px;opacity:.5;margin-top:4px\\">"+Math.round(e)+" / "+p+" marks</div>";document.getElementById("qa").prepend(bn);window.scrollTo(0,0);}');
+  lines.push('function gG(pct,ks){if((ks||"").includes("GCSE")||(ks||"").includes("IGCSE")){if(pct>=85)return"A* (9)";if(pct>=75)return"A (7-8)";if(pct>=65)return"B (6)";if(pct>=55)return"C (5)";if(pct>=45)return"D (4)";if(pct>=35)return"E (3)";return"U";}if(pct>=90)return"A*";if(pct>=80)return"A";if(pct>=70)return"B";if(pct>=60)return"C";if(pct>=50)return"D";if(pct>=40)return"E";return"U";}');
+  lines.push('<' + '/script>');
+  lines.push('</body></html>');
+  return lines.join('\n');
+}
+
+function launchStudentQuiz() {
+  const id = document.getElementById('inappQuizSelect').value;
+  const name = document.getElementById('studentName').value.trim();
+  if (!id) { alert('Please select a quiz first.'); return; }
+  if (!name) { alert('Please enter your name.'); return; }
+  activeQuiz = quizzes.find(q=>q.id===id);
+  studentName = name;
+  studentAnswers = {};
+  aiMarkingStore = {};
+  renderStudentQuiz();
+  document.getElementById('quizOverlay').classList.add('open');
+}
+
+function closeQuizOverlay() {
+  const overlay = document.getElementById('quizOverlay');
+  const existing = document.getElementById('exitConfirm');
+  if (existing) { existing.remove(); return; }
+  const bar = document.createElement('div');
+  bar.id = 'exitConfirm';
+  bar.style.cssText = 'position:sticky;top:0;z-index:200;background:#b03a2e;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-size:13px';
+  bar.innerHTML = '<span>Exit quiz? Your progress will be lost.</span><div style="display:flex;gap:8px"><button onclick="document.getElementById(\'exitConfirm\').remove()" style="padding:5px 12px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:none;color:#fff;cursor:pointer;font-size:12px">Cancel</button><button onclick="document.getElementById(\'quizOverlay\').classList.remove(\'open\');activeQuiz=null;document.getElementById(\'exitConfirm\')?.remove()" style="padding:5px 12px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-size:12px;font-weight:500">Yes, exit</button></div>';
+  overlay.prepend(bar);
+}
+
+function renderQuestionCanvas(q, idx) {
+  const canvas = document.createElement('canvas');
+  const W = 800, pad = 26;
+  canvas.width = W;
+  const ctx = canvas.getContext('2d');
+  const subject = activeQuiz.subject, ks = activeQuiz.ks;
+  const badge = `Q${idx+1}  ·  ${q.marks} mark${q.marks>1?'s':''}  ·  ${ks}  ·  ${subject}${q.topic?' · '+q.topic:''}`;
+  const lines = wrapText(ctx, q.text, W - pad*2, 17);
+  const H = pad + 20 + 12 + lines.length * 27 + pad;
+  canvas.height = H;
+  ctx.fillStyle = '#faf9f6';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#1a1814';
+  ctx.fillRect(0,0,W,4);
+  ctx.font = '500 11px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillStyle = '#8a8480';
+  ctx.fillText(badge, pad, pad+12);
+  ctx.font = '400 17px Georgia,serif';
+  ctx.fillStyle = '#1a1814';
+  lines.forEach((line,i) => ctx.fillText(line, pad, pad+20+12+i*27+16));
+  return canvas.toDataURL('image/png');
+}
+
+function wrapText(ctx, text, maxW, fs) {
+  ctx.font = `400 ${fs}px Georgia,serif`;
+  const words = text.split(' '), lines = [];
+  let cur = '';
+  words.forEach(w => {
+    const t = cur ? cur+' '+w : w;
+    if (ctx.measureText(t).width > maxW) { if(cur) lines.push(cur); cur=w; }
+    else cur=t;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function fetchSVGGraphic(q) {
+  // Return cached SVG if already pre-generated
+  if (q._svg) return q._svg;
+  if (q.customImage) {
+    return '<svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"><image href="' + q.customImage + '" x="0" y="0" width="760" height="160" preserveAspectRatio="xMidYMid meet"/></svg>';
+  }
+  const ks = activeQuiz?.ks || '';
+  const subject = activeQuiz?.subject || '';
+  const prompt = 'Create an educational SVG illustration that CONTEXTUALISES the subject area for this ' + ks + ' ' + subject + ' question.\n\n'
+    + 'Topic/strand: ' + (q.topic || subject) + '\n'
+    + 'Question (for domain context only — do NOT hint at or reveal the answer): "' + q.text + '"\n\n'
+    + 'CRITICAL RULE: Illustrate the SETTING or DOMAIN, never the answer.\n\n'
+    + 'Output ONLY the raw SVG element — nothing before or after, no markdown, no explanation.\n'
+    + 'Requirements:\n'
+    + '- Opening tag exactly: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg">\n'
+    + '- First child: <rect width="760" height="160" fill="#faf9f6"/>\n'
+    + '- Muted palette. Text labels in #555, font-family="sans-serif" size 12-13\n'
+    + '- 3-5 elements. No <image>, no <foreignObject>';
+  try {
+    const raw = await callClaude(prompt, 2000);
+    const m = raw.match(/<svg[\s\S]+?<\/svg>/i);
+    if (m) return m[0];
+    if (raw.trim().startsWith('<svg')) return raw.trim();
+    return null;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function renderStudentQuiz() {
+  const q = activeQuiz;
+  document.getElementById('qo-title').textContent = q.title;
+  document.getElementById('qo-meta').textContent = `${q.subject} · ${q.ks}${q.cls?' · '+q.cls:''}`;
+  document.getElementById('qo-progress').textContent = `${q.questions.length} questions`;
+
+  q.questions.forEach(qu => { qu.id = String(qu.id).replace(/[^a-zA-Z0-9]/g,'_'); });
+
+  let html = '';
+  q.questions.forEach((qu, idx) => {
+    const imgUrl = renderQuestionCanvas(qu, idx);
+    const svgContent = qu._svg
+      ? `<div class="q-graphic-wrap" id="sgraphic-${qu.id}" style="min-height:0">${qu._svg}</div>`
+      : `<div class="q-graphic-wrap" id="sgraphic-${qu.id}" style="min-height:140px"><div class="graphic-loading"><span class="spinner"></span>Generating illustration…</div></div>`;
+    html += `<div style="margin-bottom:28px" id="sq-${qu.id}">
+      ${svgContent}
+      <div class="q-image-block"><img src="${imgUrl}" alt="Q${idx+1}" draggable="false" /></div>`;
+
+    if (qu.type==='mcq') {
+      html += (qu.options||[]).map((opt,oi)=>`<div class="quiz-opt" id="sopt-${qu.id}-${oi}" onclick="selMCQ('${qu.id}',${oi})"><span class="opt-letter">${['A','B','C','D'][oi]}</span>${opt}</div>`).join('');
+      html += `<div id="sfeedback-${qu.id}"></div>`;
+    } else if (qu.type==='multiselect') {
+      html += (qu.options||[]).map((opt,oi)=>`<div class="quiz-opt" id="sopt-${qu.id}-${oi}" onclick="togMS('${qu.id}',${oi})"><span class="opt-letter">${['A','B','C','D'][oi]}</span>${opt}</div>`).join('');
+      html += `<div id="sfeedback-${qu.id}"></div>`;
+    } else if (qu.type==='gapfill') {
+      let g = qu.text;
+      const n = (qu.text.match(/___/g)||[]).length;
+      for(let b=0;b<n;b++) g=g.replace('___',`<input class="gap-input" id="sgap-${qu.id}-${b}" placeholder="…" oninput="saveGap('${qu.id}')" />`);
+      html += `<div style="line-height:2.4;font-size:15px;margin-top:8px">${g}</div>`;
+      html += `<div id="sfeedback-${qu.id}"></div>`;
+    } else if (qu.type==='openended') {
+      html += `<textarea id="soe-${qu.id}" rows="4" style="width:100%;margin-top:8px" placeholder="Write your answer here…" oninput="saveOE('${qu.id}')"></textarea><div id="sai-${qu.id}"></div>`;
+    } else if (qu.type==='survey') {
+      studentAnswers[qu.id]=3;
+      html += `<div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);margin-bottom:4px"><span>${qu.scaleMin||'Strongly disagree'}</span><span>${qu.scaleMax||'Strongly agree'}</span></div>
+        <input type="range" min="1" max="5" value="3" style="width:100%" oninput="studentAnswers['${qu.id}']=parseInt(this.value)" />
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-top:2px">${[1,2,3,4,5].map(n=>`<span>${n}</span>`).join('')}</div></div>`;
+      html += `<div id="sfeedback-${qu.id}"></div>`;
+    } else if (qu.type==='grid') {
+      {
+      const gDefs = (qu.pairs||[]).map(p=>p.def);
+      const gShuffled = [...gDefs].sort(()=>Math.random()-0.5);
+      qu._shuffledDefs = gShuffled;
+      const gCorrect = {};
+      (qu.pairs||[]).forEach((p,ri)=>{ gCorrect[ri] = gShuffled.indexOf(p.def); });
+      qu._gridCorrect = gCorrect;
+      const gRows = (qu.pairs||[]).map(p=>p.term);
+      html += `<div style="margin-top:10px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <td style="padding:6px 8px;min-width:130px;font-size:11px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:0.4px">Term</td>
+            ${gShuffled.map(c=>`<th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--ink2);font-size:12px">${c}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${gRows.map((row,ri)=>`
+            <tr style="border-top:0.5px solid var(--paper3)" id="sgrow-${qu.id}-${ri}">
+              <td style="padding:8px;font-size:13px;color:var(--ink);font-weight:500">${row}</td>
+              ${gShuffled.map((_,ci)=>`
+              <td style="padding:8px;text-align:center">
+                <input type="radio"
+                  name="sgrid-${qu.id}-${ri}"
+                  id="sgrid-${qu.id}-${ri}-${ci}"
+                  value="${ci}"
+                  style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"
+                  onchange="saveGridMatch('${qu.id}',${ri},${ci})" />
+              </td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div id="sfeedback-${qu.id}"></div>`;
+      }
+    } else if (qu.type==='gridradio' || qu.type==='gridcheck') {
+      {
+      const isRadio = qu.type==='gridradio';
+      const grRows = qu.rows||[];
+      const grCols = qu.cols||[];
+      html += `<div style="margin-top:10px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <td style="padding:6px 8px;min-width:120px"></td>
+            ${grCols.map(c=>`<th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--ink2);font-size:12px">${c}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${grRows.map((row,ri)=>`
+            <tr style="border-top:0.5px solid var(--paper3)" id="sgrow-${qu.id}-${ri}">
+              <td style="padding:8px;font-size:13px;color:var(--ink)">${row}</td>
+              ${grCols.map((col,ci)=>`
+              <td style="padding:8px;text-align:center">
+                <input type="${isRadio?'radio':'checkbox'}"
+                  name="sgrid-${qu.id}-${ri}"
+                  id="sgrid-${qu.id}-${ri}-${ci}"
+                  value="${ci}"
+                  style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"
+                  onchange="${isRadio?`saveGridRadio('${qu.id}',${ri},${ci})`:`saveGridCheck('${qu.id}',${ri},${ci})`}" />
+              </td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div id="sfeedback-${qu.id}"></div>`;
+      }
+    }
+    html += `</div><hr class="divider">`;
+  });
+
+  document.getElementById('quizPlayerBody').innerHTML = html;
+  document.getElementById('quizSubmitRow').style.display = 'block';
+
+  for (const qu of q.questions) {
+    if (qu._svg) continue; // already injected inline above
+    const wrap = document.getElementById(`sgraphic-${qu.id}`);
+    if (!wrap) continue;
+    try {
+      const svg = await fetchSVGGraphic(qu);
+      if (svg) {
+        qu._svg = svg; // cache for future use
+        wrap.innerHTML = svg;
+        wrap.style.minHeight = '0';
+      } else {
+        wrap.innerHTML = `<div style="padding:1rem;font-size:12px;color:var(--ink3);font-style:italic;text-align:center">Illustration unavailable</div>`;
+        wrap.style.minHeight = '0';
+      }
+    } catch(e) {
+      wrap.style.display = 'none';
+    }
+  }
+  persistQuizzes(); // save newly fetched SVGs to DB
+}
+
+function selMCQ(qid,oi) {
+  studentAnswers[qid]=oi;
+  const q=activeQuiz.questions.find(q=>q.id===qid);
+  if (!q) return;
+  (q.options||[]).forEach((_,i)=>{ const el=document.getElementById(`sopt-${qid}-${i}`); if(el) el.classList.toggle('selected',i===oi); });
+}
+function togMS(qid,oi) {
+  if(!studentAnswers[qid]) studentAnswers[qid]=[];
+  const i=studentAnswers[qid].indexOf(oi);
+  if(i===-1) studentAnswers[qid].push(oi); else studentAnswers[qid].splice(i,1);
+  const el=document.getElementById(`sopt-${qid}-${oi}`);
+  if(el) el.classList.toggle('selected',studentAnswers[qid].includes(oi));
+}
+function saveGap(qid) {
+  const q=activeQuiz.questions.find(q=>q.id===qid);
+  if (!q) return;
+  const n=(q.text.match(/___/g)||[]).length;
+  studentAnswers[qid]=[...Array(n)].map((_,b)=>(document.getElementById(`sgap-${qid}-${b}`)?.value||'').trim().toLowerCase());
+}
+function saveOE(qid) { studentAnswers[qid]=document.getElementById(`soe-${qid}`)?.value||''; }
+function saveGrid(qid) {
+  const q=activeQuiz.questions.find(q=>q.id===qid);
+  if (!q) return;
+  studentAnswers[qid]=(q.pairs||[]).map((_,pi)=>{
+    const v=document.getElementById(`sgrid-${qid}-${pi}`)?.value;
+    return v===''||v===undefined ? null : parseInt(v);
+  });
+}
+function saveGridMatch(qid,ri,ci) {
+  if (!studentAnswers[qid]) studentAnswers[qid]={};
+  studentAnswers[qid][ri] = ci;
+}
+function saveGridRadio(qid,ri,ci) {
+  if (!studentAnswers[qid]) studentAnswers[qid]={};
+  studentAnswers[qid][ri] = ci;
+}
+function saveGridCheck(qid,ri,ci) {
+  if (!studentAnswers[qid]) studentAnswers[qid]={};
+  if (!studentAnswers[qid][ri]) studentAnswers[qid][ri]=[];
+  const arr = studentAnswers[qid][ri];
+  const idx = arr.indexOf(ci);
+  if (idx===-1) arr.push(ci); else arr.splice(idx,1);
+}
+
+// ── per-type marking helpers (each is its own function scope — no const collisions) ──
+
+function markMCQ(q, feedbackEl) {
+  var ans = studentAnswers[q.id];
+  var correct = (ans === q.correct);
+  var pts = correct ? q.marks : 0;
+  (q.options||[]).forEach(function(_,i) {
+    var el = document.getElementById('sopt-'+q.id+'-'+i);
+    if (!el) return;
+    if (i === q.correct) el.classList.add('correct');
+    else if (i === ans && !correct) el.classList.add('wrong');
+  });
+  if (feedbackEl) feedbackEl.innerHTML = correct
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ Correct! Well done.</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Incorrect. The correct answer was <strong>'+(['A','B','C','D'][q.correct])+': '+((q.options||[])[q.correct]||'')+'</strong>.</div>';
+  return pts;
+}
+
+function markMultiselect(q, feedbackEl) {
+  var a = (studentAnswers[q.id]||[]).map(Number).sort();
+  var c = (q.correct||[]).map(Number).sort();
+  var correct = JSON.stringify(a) === JSON.stringify(c);
+  var pts = correct ? q.marks : 0;
+  (q.options||[]).forEach(function(_,i) {
+    var el = document.getElementById('sopt-'+q.id+'-'+i);
+    if (!el) return;
+    if (c.includes(i)) el.classList.add('correct');
+    else if (a.includes(i)) el.classList.add('wrong');
+  });
+  var labels = c.map(function(i){ return ['A','B','C','D'][i]+': '+((q.options||[])[i]||''); }).join(', ');
+  if (feedbackEl) feedbackEl.innerHTML = correct
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ Correct! All right options selected.</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Incorrect. The correct answers were: <strong>'+labels+'</strong>.</div>';
+  return pts;
+}
+
+function markGapfill(q, feedbackEl) {
+  var a = studentAnswers[q.id]||[];
+  var pts = 0;
+  var missed = [];
+  (q.answers||[]).forEach(function(ans, b) {
+    var ok = (a[b]||'').toLowerCase() === ans.toLowerCase();
+    if (ok) pts += q.marks / (q.answers.length||1);
+    else missed.push('Blank '+(b+1)+': correct answer is <strong>'+ans+'</strong>');
+    var el = document.getElementById('sgap-'+q.id+'-'+b);
+    if (el) { el.style.borderColor = ok?'var(--accent2)':'var(--red)'; el.style.color = ok?'var(--accent)':'var(--red)'; }
+  });
+  if (feedbackEl) feedbackEl.innerHTML = missed.length===0
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ All blanks correct!</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ '+missed.join(' · ')+'</div>';
+  return pts;
+}
+
+function markGrid(q, feedbackEl) {
+  var ans = studentAnswers[q.id]||{};
+  var termRows = (q.pairs||[]).map(function(p){ return p.term; });
+  var correct = q._gridCorrect||{};
+  var defs = q._shuffledDefs||(q.pairs||[]).map(function(p){ return p.def; });
+  var pts = 0, missed = [];
+  termRows.forEach(function(row, ri) {
+    var sel = ans[ri];
+    var rightCol = Number(correct[ri]);
+    var ok = (sel !== undefined && sel !== null) && Number(sel) === rightCol;
+    if (ok) pts += q.marks / (termRows.length||1);
+    else missed.push('<strong>'+row+'</strong> → '+(defs[rightCol]||'?'));
+    var rowEl = document.getElementById('sgrow-'+q.id+'-'+ri);
+    if (rowEl) rowEl.style.background = ok?'var(--accent-pale)':'var(--red-pale)';
+  });
+  if (feedbackEl) feedbackEl.innerHTML = missed.length===0
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ All matches correct!</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Correct matches — '+missed.join(' · ')+'</div>';
+  return pts;
+}
+
+function markGridradio(q, feedbackEl) {
+  var ans = studentAnswers[q.id]||{};
+  var rows = q.rows||[], cols = q.cols||[];
+  var correct = q.correct||{};
+  var pts = 0, missed = [];
+  rows.forEach(function(row, ri) {
+    var sel = ans[ri];
+    var rightCol = Number(correct[ri]);
+    var ok = (sel !== undefined && sel !== null) && Number(sel) === rightCol;
+    if (ok) pts += q.marks / (rows.length||1);
+    else missed.push('<strong>'+row+'</strong>: '+(cols[rightCol]!==undefined?cols[rightCol]:'?'));
+    var rowEl = document.getElementById('sgrow-'+q.id+'-'+ri);
+    if (rowEl) rowEl.style.background = ok?'var(--accent-pale)':'var(--red-pale)';
+  });
+  if (feedbackEl) feedbackEl.innerHTML = missed.length===0
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ All rows correct!</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Correct answers — '+missed.join(' · ')+'</div>';
+  return pts;
+}
+
+function markGridcheck(q, feedbackEl) {
+  var ans = studentAnswers[q.id]||{};
+  var rows = q.rows||[], cols = q.cols||[];
+  var correct = q.correct||{};
+  var pts = 0, missed = [];
+  rows.forEach(function(row, ri) {
+    var sel = (ans[ri]||[]).map(Number).slice().sort().join(',');
+    var rightCols = (correct[ri]||[]).map(Number).slice().sort();
+    var ok = sel === rightCols.join(',');
+    if (ok) pts += q.marks / (rows.length||1);
+    else missed.push('<strong>'+row+'</strong>: '+rightCols.map(function(ci){ return cols[ci]; }).join(', '));
+    var rowEl = document.getElementById('sgrow-'+q.id+'-'+ri);
+    if (rowEl) rowEl.style.background = ok?'var(--accent-pale)':'var(--red-pale)';
+  });
+  if (feedbackEl) feedbackEl.innerHTML = missed.length===0
+    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ All rows correct!</div>'
+    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Correct answers — '+missed.join(' · ')+'</div>';
+  return pts;
+}
+
+async function submitStudentQuiz() {
+  document.getElementById('quizSubmitRow').style.display = 'none';
+  var earned = 0, possible = 0;
+  var qs = activeQuiz.questions;
+
+  qs.forEach(function(q) {
+    possible += q.marks;
+    var feedbackEl = document.getElementById('sfeedback-'+q.id);
+    if      (q.type==='mcq')        earned += markMCQ(q, feedbackEl);
+    else if (q.type==='multiselect') earned += markMultiselect(q, feedbackEl);
+    else if (q.type==='gapfill')     earned += markGapfill(q, feedbackEl);
+    else if (q.type==='grid')        earned += markGrid(q, feedbackEl);
+    else if (q.type==='gridradio')   earned += markGridradio(q, feedbackEl);
+    else if (q.type==='gridcheck')   earned += markGridcheck(q, feedbackEl);
+    else if (q.type==='survey') {
+      earned += q.marks;
+      if (feedbackEl) feedbackEl.innerHTML = '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ Response recorded. Thank you!</div>';
+    }
+  });
+
+  // Open-ended: AI marking
+  var oeQs = qs.filter(function(q){ return q.type==='openended'; });
+  if (oeQs.length) {
+    oeQs.forEach(function(q) {
+      var el = document.getElementById('sai-'+q.id);
+      if (el) el.innerHTML = '<div style="font-size:12px;color:var(--ink3);font-style:italic;margin-top:6px"><span class="spinner"></span>AI marking…</div>';
+    });
+    for (var oi=0; oi<oeQs.length; oi++) {
+      var oq = oeQs[oi];
+      var result = await markOE(oq);
+      aiMarkingStore[oq.id] = result;
+      earned += result.marks;
+      var oel = document.getElementById('sai-'+oq.id);
+      var isGood = result.marks >= oq.marks*0.5;
+      if (oel) oel.innerHTML =
+        '<div class="oe-feedback" style="border-left:3px solid '+(isGood?'var(--accent2)':'var(--red)')+';background:'+(isGood?'var(--accent-pale)':'var(--red-pale)')+'">'+result.feedback+'</div>'
+        +'<div class="marks-chip">'+result.marks+'/'+oq.marks+' marks awarded</div>';
+    }
+  }
+
+  var pct = possible>0 ? Math.round(earned/possible*100) : 0;
+  var grade = getGrade(pct, activeQuiz.ks);
+  var gc = 'grade-'+grade[0];
+
+  var sub = { name:studentName, answers:studentAnswers, earned:Math.round(earned*10)/10, possible:possible, pct:pct, submittedAt:new Date().toISOString() };
+  activeQuiz.submissions.push(sub);
+  updateOverview();
+  persistQuizzes();
+
+  var banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--ink);color:#fff;padding:28px;text-align:center;border-radius:var(--r2);margin-bottom:24px';
+  banner.innerHTML =
+    '<div style="font-family:DM Serif Display,serif;font-size:13px;letter-spacing:1px;opacity:0.6;margin-bottom:8px">RESULT — '+studentName+'</div>'
+    +'<div class="'+gc+'" style="font-family:DM Serif Display,serif;font-size:60px;line-height:1">'+grade+'</div>'
+    +'<div style="font-size:22px;margin-top:8px;opacity:0.8">'+pct+'%</div>'
+    +'<div style="font-size:13px;opacity:0.5;margin-top:4px">'+Math.round(earned)+' / '+possible+' marks</div>'
+    +'<button class="btn btn-sm" style="margin-top:16px;background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2)" onclick="document.getElementById(\'quizOverlay\').classList.remove(\'open\')">Close</button>';
+  document.getElementById('quizPlayerBody').prepend(banner);
+  document.getElementById('quizPlayerBody').scrollIntoView();
+}
+
+async function markOE(q) {
+  const ans=studentAnswers[q.id]||'';
+  if(!ans.trim()) return {marks:0,feedback:'No answer provided.'};
+  const prompt=`You are an experienced ${activeQuiz.ks} ${activeQuiz.subject} examiner.
+Question (${q.marks} marks): ${q.text}
+Mark scheme: ${q.markScheme||'Award marks for relevant, accurate, well-explained points.'}
+Student answer: ${ans}
+Award 0–${q.marks} marks. Respond ONLY with JSON: {"marks":<number>,"feedback":"<2-3 sentence examiner comment in British English>"}`;
+  try {
+    const raw=await callClaude(prompt,350);
+    const p=JSON.parse(raw);
+    return {marks:Math.min(q.marks,Math.max(0,p.marks||0)),feedback:p.feedback||'Marked.'};
+  } catch(e){ return {marks:0,feedback:'AI marking unavailable. Please ask your teacher to mark this response.'}; }
+}
+
+// ═══════════════════════════════════════════════
+// SEED DEMO QUIZZES
+// ═══════════════════════════════════════════════
+function buildDemoQuizzes() {
+  const d = new Date();
+  const fmt = d.toLocaleDateString('en-GB');
+
+  const bioQs = [
+    { id: 'b1', type:'mcq', text:'Which organelle is responsible for producing ATP through cellular respiration?', options:['Nucleus','Mitochondria','Ribosome','Chloroplast'], correct:1, marks:1, topic:'Cell Biology', ks:'Cambridge IGCSE' },
+    { id: 'b2', type:'mcq', text:'What is the monomer of a protein molecule?', options:['Glucose','Fatty acid','Amino acid','Nucleotide'], correct:2, marks:1, topic:'Biochemistry', ks:'Cambridge IGCSE' },
+    { id: 'b3', type:'gapfill', text:'Photosynthesis takes place in the ___ and requires ___ and carbon dioxide as raw materials.', answers:['chloroplast','water'], marks:2, topic:'Photosynthesis', ks:'Cambridge IGCSE' },
+    { id: 'b4', type:'multiselect', text:'Which of the following are products of aerobic respiration? (Select all that apply)', options:['Carbon dioxide','Oxygen','Water','ATP'], correct:[0,2,3], marks:3, topic:'Respiration', ks:'Cambridge IGCSE' },
+    { id: 'b5', type:'openended', text:'Explain how the structure of a red blood cell is adapted for its function.', markScheme:'Award 1 mark each for: biconcave disc shape increases surface area; no nucleus — more space for haemoglobin; flexible — can pass through capillaries; large surface area:volume ratio for fast diffusion of oxygen. Max 4 marks.', marks:4, topic:'Transport', ks:'Cambridge IGCSE' },
+    { id: 'b6', type:'gridradio', text:'Match each cell structure to its correct function by selecting one option per row.', rows:['Cell membrane','Cell wall','Vacuole','Chloroplast'], cols:['Controls entry/exit of substances','Provides rigid support','Stores cell sap','Site of photosynthesis'], correct:{0:0,1:1,2:2,3:3}, marks:4, topic:'Cell Biology', ks:'Cambridge IGCSE' },
+    { id: 'b7', type:'grid', text:'Match each term to its definition.', pairs:[{term:'Osmosis',def:'Movement of water across a partially permeable membrane'},{term:'Diffusion',def:'Net movement of particles from high to low concentration'},{term:'Active transport',def:'Movement of substances against a concentration gradient using energy'}], marks:3, topic:'Transport', ks:'Cambridge IGCSE' },
+    { id: 'b8', type:'survey', text:'How confident are you with the topic of cell biology?', scaleMin:'Not confident', scaleMax:'Very confident', marks:1, topic:'Self-assessment', ks:'Cambridge IGCSE' },
+  ];
+
+  const histQs = [
+    { id: 'h1', type:'mcq', text:'In which year did World War One begin?', options:['1912','1914','1916','1918'], correct:1, marks:1, topic:'WWI', ks:'KS4 (GCSE)' },
+    { id: 'h2', type:'mcq', text:'Which event is considered the immediate trigger of World War One?', options:['Invasion of Belgium','Assassination of Archduke Franz Ferdinand','Sinking of the Lusitania','Russian mobilisation'], correct:1, marks:1, topic:'WWI', ks:'KS4 (GCSE)' },
+    { id: 'h3', type:'gapfill', text:'The Treaty of ___ ended World War One and imposed heavy ___ on Germany.', answers:['versailles','reparations'], marks:2, topic:'Aftermath', ks:'KS4 (GCSE)' },
+    { id: 'h4', type:'openended', text:'Explain why the policy of appeasement failed to prevent the outbreak of World War Two.', markScheme:'Award marks for: Hitler aimed beyond negotiation (1); emboldened by concessions (1); Czechoslovakia occupation showed limits (1); Britain/France not militarily ready (1); Chamberlain misread Hitler (1). Max 4 marks.', marks:4, topic:'WWII Causes', ks:'KS4 (GCSE)' },
+    { id: 'h5', type:'multiselect', text:'Which of the following were causes of World War One? (Select all that apply)', options:['Militarism','Alliance systems','Assassination of Franz Ferdinand','The Great Depression'], correct:[0,1,2], marks:3, topic:'WWI Causes', ks:'KS4 (GCSE)' },
+    { id: 'h6', type:'gridcheck', text:'Tick all terms that apply to each historical concept.', rows:['Imperialism','Nationalism'], cols:['Competition for colonies','Pride in own nation','Building up armed forces','Forming military alliances'], correct:{0:[0,2],1:[1,3]}, marks:4, topic:'WWI Causes', ks:'KS4 (GCSE)' },
+  ];
+
+  const mathQs = [
+    { id: 'm1', type:'mcq', text:'Solve for x: 3x + 7 = 22', options:['x = 3','x = 4','x = 5','x = 6'], correct:2, marks:1, topic:'Algebra', ks:'KS3' },
+    { id: 'm2', type:'mcq', text:'What is the area of a circle with radius 5 cm? (Use π ≈ 3.14)', options:['15.7 cm²','78.5 cm²','31.4 cm²','25 cm²'], correct:1, marks:1, topic:'Geometry', ks:'KS3' },
+    { id: 'm3', type:'gapfill', text:'The gradient of a straight line is calculated as ___ divided by ___.', answers:['rise','run'], marks:2, topic:'Graphs', ks:'KS3' },
+    { id: 'm4', type:'openended', text:'A bag contains 3 red, 5 blue, and 2 green balls. What is the probability of picking a blue ball? Show your working.', markScheme:'Award 1 mark for identifying 5 blue out of 10 total; 1 mark for correct fraction 5/10 or simplified 1/2; 1 mark for correct decimal or percentage (0.5 or 50%).', marks:3, topic:'Probability', ks:'KS3' },
+    { id: 'm5', type:'multiselect', text:'Which of the following are properties of a parallelogram? (Select all that apply)', options:['Opposite sides are equal','All angles are 90°','Diagonals bisect each other','All sides are equal'], correct:[0,2], marks:2, topic:'Geometry', ks:'KS3' },
+    { id: 'm6', type:'gridradio', text:'Match each formula to the correct shape.', rows:['Area of a triangle','Area of a circle','Circumference of a circle','Volume of a cuboid'], cols:['½ × base × height','πr²','2πr','l × w × h'], correct:{0:0,1:1,2:2,3:3}, marks:4, topic:'Formulae', ks:'KS3' },
+  ];
+
+  return [
+    {
+      id: 'demo-bio-001', title: 'Cell Biology & Life Processes', subject: 'Biology',
+      ks: 'Cambridge IGCSE', cls: '10 Alpha', status: 'live',
+      questions: bioQs, createdAt: fmt,
+      submissions: simulateSubmissions(bioQs, 'live')
+    },
+    {
+      id: 'demo-hist-001', title: 'World Wars — Causes & Consequences', subject: 'History',
+      ks: 'KS4 (GCSE)', cls: '10B Set 1', status: 'live',
+      questions: histQs, createdAt: fmt,
+      submissions: simulateSubmissions(histQs, 'live')
+    },
+    {
+      id: 'demo-math-001', title: 'KS3 Maths — Algebra & Geometry', subject: 'Mathematics',
+      ks: 'KS3', cls: 'Year 9', status: 'draft',
+      questions: mathQs, createdAt: fmt,
+      submissions: []
+    }
+  ];
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+renderQForm();
+initApiKeyUI();
+(async () => {
+  try {
+    const saved = await dbLoadAll();
+    const demos = buildDemoQuizzes();
+    const demoIds = new Set(demos.map(d => d.id));
+    if (saved.length) {
+      // Keep all existing quizzes; re-inject any demo quizzes that are missing
+      const existingIds = new Set(saved.map(q => q.id));
+      const missingDemos = demos.filter(d => !existingIds.has(d.id));
+      quizzes = [...saved, ...missingDemos];
+      if (missingDemos.length) {
+        await dbSaveAll(quizzes);
+        console.log('QuizCraft: restored', missingDemos.length, 'missing demo quizzes');
+      } else {
+        console.log('QuizCraft: loaded', quizzes.length, 'quizzes from IndexedDB');
+      }
+    } else {
+      // First run — seed with demo quizzes
+      quizzes = demos;
+      await dbSaveAll(quizzes);
+      console.log('QuizCraft: seeded', quizzes.length, 'demo quizzes');
+    }
+  } catch(e) {
+    console.warn('QuizCraft: could not load from IndexedDB:', e);
+    if (!quizzes.length) quizzes = buildDemoQuizzes();
+  }
+  updateOverview();
+  refreshAllSelects();
+})();
+</script>
+</body>
+</html>
