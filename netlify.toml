@@ -1,6 +1,23 @@
 [build]
-  publish = "."
+  functions = "netlify/functions"
 
-[[edge_functions]]
-  path = "/api/claude"
-  function = "claude"
+[[redirects]]
+  from = "/api/anthropic"
+  to = "/.netlify/functions/anthropic-proxy"
+  status = 200
+
+[[redirects]]
+  from = "/api/claude"
+  to = "/.netlify/functions/anthropic-proxy"
+  status = 200
+
+[[redirects]]
+  from = "/api/quiz-submit"
+  to = "/.netlify/functions/quiz-submit"
+  status = 200
+
+[[redirects]]
+  from = "/api/quiz-results"
+  to = "/.netlify/functions/quiz-results"
+  status = 200
+
