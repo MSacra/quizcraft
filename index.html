@@ -1417,16 +1417,12 @@ function checkQuizURLParam() {
   studentName = name.trim();
   studentAnswers = {}; aiMarkingStore = {};
   activeQuiz = q;
-  document.querySelector('.shell').style.display = 'none';
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'min-height:100vh;background:var(--paper2)';
-  document.body.appendChild(wrapper);
   pregenerateSVGs(q, null).then(() => {
     renderStudentQuiz();
-    document.getElementById('quizOverlay').style.position = 'relative';
-    document.getElementById('quizOverlay').style.height = 'auto';
-    document.getElementById('quizOverlay').classList.add('open');
-    wrapper.appendChild(document.getElementById('quizOverlay'));
+    const overlay = document.getElementById('quizOverlay');
+    overlay.classList.add('open');
+    overlay.style.cssText = 'display:block;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;overflow-y:auto;background:var(--ink)';
+    document.querySelector('.shell').style.display = 'none';
   });
 }
 
@@ -2316,7 +2312,7 @@ initApiKeyUI();
   }
   updateOverview();
   refreshAllSelects();
-  checkQuizURLParam();
+  setTimeout(checkQuizURLParam, 100);
 })();
 </script>
 </body>
