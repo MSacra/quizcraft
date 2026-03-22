@@ -20,4 +20,3 @@
   from = "/api/quiz-results"
   to = "/.netlify/functions/quiz-results"
   status = 200
-
