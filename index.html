@@ -1421,11 +1421,13 @@ function checkQuizURLParam() {
   studentAnswers = {}; aiMarkingStore = {};
   activeQuiz = q;
   document.querySelector('.shell').style.display = 'none';
-  pregenerateSVGs(q, null).then(() => {
+  document.getElementById('quizOverlay').classList.add('open');
+  document.getElementById('quizPlayerBody').innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)"><div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading your quiz…</div><div style="font-size:13px;opacity:0.6">Just a moment, '+name.trim()+'</div></div>';
+  setTimeout(() => {
     renderStudentQuiz();
     document.getElementById('quizSubmitRow').style.display = 'block';
-    document.getElementById('quizOverlay').classList.add('open');
-  });
+    pregenerateSVGs(q, null).then(() => persistQuizzes());
+  }, 50);
 }
 
 // ═══════════════════════════════════════════════
