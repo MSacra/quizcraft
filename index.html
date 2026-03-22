@@ -667,7 +667,6 @@ textarea { resize: vertical; line-height: 1.6; }
               </div>
               <div id="srcFile">
                 <div class="form-group">
-                  <label class="lbl">File (PDF, TXT, images, etc.)</label>
                   <input type="file" id="b-file" accept="*/*" style="font-size:13px;padding:6px 0;" onchange="onFileSelected(this)" />
                 </div>
               </div>
@@ -2413,25 +2412,26 @@ function onFileSelected(input) {
     reader.readAsText(file);
 
   } else if (isPDF) {
-    // Extract text from PDF in the browser using PDF.js — no proxy needed
     setFileInfo('Extracting text from PDF...', 'ok');
     var reader = new FileReader();
     reader.onload = async function(e) {
       try {
-        var pdfjsLib = window['pdfjs-dist/build/pdf'];
-        if (!pdfjsLib) {
-          // Load PDF.js dynamically
+        // Load PDF.js if not already loaded
+        if (!window.pdfjsLib) {
           await new Promise(function(resolve, reject) {
             var s = document.createElement('script');
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            s.onload = resolve; s.onerror = reject;
+            s.onload = function() {
+              window.pdfjsLib = window.pdfjsLib || pdfjsLib;
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+              resolve();
+            };
+            s.onerror = reject;
             document.head.appendChild(s);
           });
-          pdfjsLib = window['pdfjs-dist/build/pdf'];
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
         var typedArray = new Uint8Array(e.target.result);
-        var pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+        var pdf = await window.pdfjsLib.getDocument({ data: typedArray }).promise;
         var text = '';
         for (var i = 1; i <= Math.min(pdf.numPages, 30); i++) {
           var page = await pdf.getPage(i);
@@ -2443,7 +2443,7 @@ function onFileSelected(input) {
         setFileInfo('✓ ' + file.name + ' ready (' + pdf.numPages + ' pages, ' + Math.round(uploadedFileText.length / 1000) + 'k chars)', 'ok');
         document.getElementById('btnGenFile').disabled = false;
       } catch(err) {
-        setFileInfo('✗ Could not extract text from PDF. Try saving as .txt first.', 'warn');
+        setFileInfo('✗ Could not extract text from PDF: ' + err.message, 'warn');
       }
     };
     reader.readAsArrayBuffer(file);
