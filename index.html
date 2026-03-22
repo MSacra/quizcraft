@@ -2399,11 +2399,11 @@ function onFileSelected(input) {
   document.getElementById('btnGenFile').disabled = true;
   setFileInfo('Reading ' + file.name + '...', 'ok');
 
-  var isPDF   = file.type === 'application/pdf' || file.name.endsWith('.pdf');
-  var isImage = file.type.startsWith('image/');
-  var isText  = file.type.startsWith('text/') || /\.(txt|md|csv|html|htm|js|py|json)$/i.test(file.name);
+  var isPDF  = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+  var isText = file.type.startsWith('text/') || /\.(txt|md|csv|html|htm|js|py|json)$/i.test(file.name);
 
   if (isText) {
+    // Read text files entirely in the browser — no size limit
     var reader = new FileReader();
     reader.onload = function(e) {
       uploadedFileText = e.target.result.trim();
@@ -2411,38 +2411,57 @@ function onFileSelected(input) {
       document.getElementById('btnGenFile').disabled = false;
     };
     reader.readAsText(file);
-  } else {
-    // PDF, image, Word, PPT — send as base64 to Claude for extraction
+
+  } else if (isPDF) {
+    // Extract text from PDF in the browser using PDF.js — no proxy needed
+    setFileInfo('Extracting text from PDF...', 'ok');
     var reader = new FileReader();
     reader.onload = async function(e) {
-      var base64 = e.target.result.split(',')[1];
-      var mediaType = isPDF ? 'application/pdf' : (isImage ? file.type : 'application/octet-stream');
-      var block = (isPDF || isImage)
-        ? (isPDF ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-                 : { type: 'image',    source: { type: 'base64', media_type: mediaType,           data: base64 } })
-        : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
       try {
-        var res = await fetch('/api/claude', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-            messages: [{ role: 'user', content: [
-              block,
-              { type: 'text', text: 'Extract and return all the main text content from this file (' + file.name + '). Return only the text, no commentary.' }
-            ]}]
-          })
-        });
-        var data = await res.json();
-        uploadedFileText = (data.content || []).map(function(c){ return c.text || ''; }).join('').trim();
-        if (!uploadedFileText || uploadedFileText.length < 20) throw new Error();
-        setFileInfo('✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length / 1000) + 'k chars extracted)', 'ok');
+        var pdfjsLib = window['pdfjs-dist/build/pdf'];
+        if (!pdfjsLib) {
+          // Load PDF.js dynamically
+          await new Promise(function(resolve, reject) {
+            var s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = resolve; s.onerror = reject;
+            document.head.appendChild(s);
+          });
+          pdfjsLib = window['pdfjs-dist/build/pdf'];
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        var typedArray = new Uint8Array(e.target.result);
+        var pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+        var text = '';
+        for (var i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+          var page = await pdf.getPage(i);
+          var content = await page.getTextContent();
+          text += content.items.map(function(item){ return item.str; }).join(' ') + '\n';
+        }
+        uploadedFileText = text.trim();
+        if (!uploadedFileText || uploadedFileText.length < 20) throw new Error('No text found');
+        setFileInfo('✓ ' + file.name + ' ready (' + pdf.numPages + ' pages, ' + Math.round(uploadedFileText.length / 1000) + 'k chars)', 'ok');
         document.getElementById('btnGenFile').disabled = false;
-      } catch(e) {
-        setFileInfo('✗ Could not extract text from ' + file.name + '. Try saving as PDF or .txt first.', 'warn');
+      } catch(err) {
+        setFileInfo('✗ Could not extract text from PDF. Try saving as .txt first.', 'warn');
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
+
+  } else {
+    // Word, PPT and other formats — read as text and hope for the best, otherwise guide user
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s{3,}/g, ' ').trim();
+      if (text.length > 100) {
+        uploadedFileText = text;
+        setFileInfo('✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length / 1000) + 'k chars extracted)', 'ok');
+        document.getElementById('btnGenFile').disabled = false;
+      } else {
+        setFileInfo('✗ Could not read ' + file.name + '. Please save as PDF or .txt and re-upload.', 'warn');
+      }
+    };
+    reader.readAsText(file);
   }
 }
 
