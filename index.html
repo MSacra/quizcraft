@@ -2067,20 +2067,40 @@ function markMCQ(q, feedbackEl) {
 }
 
 function markMultiselect(q, feedbackEl) {
-  var a = (studentAnswers[q.id]||[]).map(Number).sort();
-  var c = (q.correct||[]).map(Number).sort();
-  var correct = JSON.stringify(a) === JSON.stringify(c);
-  var pts = correct ? q.marks : 0;
+  var a = (studentAnswers[q.id]||[]).map(Number);
+  var c = (q.correct||[]).map(Number);
+  var perMark = q.marks / (c.length || 1);
+  var pts = 0;
+  var missed = [];
+  var wrong = [];
   (q.options||[]).forEach(function(_,i) {
     var el = document.getElementById('sopt-'+q.id+'-'+i);
-    if (!el) return;
-    if (c.includes(i)) el.classList.add('correct');
-    else if (a.includes(i)) el.classList.add('wrong');
+    var isCorrect = c.includes(i);
+    var wasSelected = a.includes(i);
+    if (isCorrect && wasSelected) {
+      pts += perMark;
+      if (el) el.classList.add('correct');
+    } else if (isCorrect && !wasSelected) {
+      missed.push(['A','B','C','D'][i]+': '+((q.options||[])[i]||''));
+      if (el) el.classList.add('correct');
+    } else if (!isCorrect && wasSelected) {
+      pts -= perMark * 0.5;
+      wrong.push(['A','B','C','D'][i]);
+      if (el) el.classList.add('wrong');
+    }
   });
-  var labels = c.map(function(i){ return ['A','B','C','D'][i]+': '+((q.options||[])[i]||''); }).join(', ');
-  if (feedbackEl) feedbackEl.innerHTML = correct
-    ? '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ Correct! All right options selected.</div>'
-    : '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">✗ Incorrect. The correct answers were: <strong>'+labels+'</strong>.</div>';
+  pts = Math.max(0, Math.round(pts * 10) / 10);
+  var allCorrect = missed.length === 0 && wrong.length === 0;
+  var fb;
+  if (allCorrect) {
+    fb = '<div class="oe-feedback" style="border-left:3px solid var(--accent2);background:var(--accent-pale);color:var(--accent)">✓ All correct! Full marks awarded.</div>';
+  } else {
+    fb = '<div class="oe-feedback" style="border-left:3px solid var(--red);background:var(--red-pale);color:var(--red)">';
+    if (missed.length) fb += '✗ Missed: <strong>' + missed.join(', ') + '</strong>. ';
+    if (wrong.length) fb += 'Wrongly selected: <strong>' + wrong.join(', ') + '</strong>. ';
+    fb += pts + '/' + q.marks + ' marks awarded.</div>';
+  }
+  if (feedbackEl) feedbackEl.innerHTML = fb;
   return pts;
 }
 
