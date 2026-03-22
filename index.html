@@ -2273,18 +2273,32 @@ async function submitStudentQuiz() {
 }
 
 async function markOE(q) {
-  const ans=studentAnswers[q.id]||'';
-  if(!ans.trim()) return {marks:0,feedback:'No answer provided.'};
-  const prompt=`You are an experienced ${activeQuiz.ks} ${activeQuiz.subject} examiner.
-Question (${q.marks} marks): ${q.text}
-Mark scheme: ${q.markScheme||'Award marks for relevant, accurate, well-explained points.'}
-Student answer: ${ans}
-Award 0–${q.marks} marks. Respond ONLY with JSON: {"marks":<number>,"feedback":"<2-3 sentence examiner comment in British English>"}`;
-  try {
-    const raw=await callClaude(prompt,350);
-    const p=JSON.parse(raw);
-    return {marks:Math.min(q.marks,Math.max(0,p.marks||0)),feedback:p.feedback||'Marked.'};
-  } catch(e){ return {marks:0,feedback:'AI marking unavailable. Please ask your teacher to mark this response.'}; }
+  const ans = studentAnswers[q.id] || '';
+  if (!ans.trim()) return { marks: 0, feedback: 'No answer provided.' };
+  const prompt = 'You are an experienced ' + (activeQuiz.ks||'') + ' ' + (activeQuiz.subject||'') + ' examiner.\n'
+    + 'Question (' + q.marks + ' marks): ' + q.text + '\n'
+    + 'Mark scheme: ' + (q.markScheme || 'Award marks for relevant, accurate, well-explained points.') + '\n'
+    + 'Student answer: ' + ans + '\n'
+    + 'Award 0-' + q.marks + ' marks. Respond ONLY with JSON: {"marks":<number>,"feedback":"<2-3 sentence examiner comment in British English>"}';
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 350, messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      const raw = (data.content || []).map(function(c){ return c.text || ''; }).join('').trim();
+      const fi = Math.min(raw.indexOf('{') < 0 ? 1e9 : raw.indexOf('{'), 1e9);
+      const li = raw.lastIndexOf('}');
+      const jsonStr = (fi < 1e9 && li > fi) ? raw.slice(fi, li + 1) : raw;
+      const p = JSON.parse(jsonStr);
+      return { marks: Math.min(q.marks, Math.max(0, p.marks || 0)), feedback: p.feedback || 'Marked.' };
+    } catch(e) {
+      if (attempt === 1) return { marks: 0, feedback: 'AI marking unavailable — ' + e.message + '. Your teacher will review this response.' };
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════
