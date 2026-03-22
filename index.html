@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QuizCraft — UK & Cambridge Assessment Platform</title>
+<title>DrSacramentoQuiz — UK & Cambridge Assessment Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -504,7 +504,7 @@ textarea { resize: vertical; line-height: 1.6; }
   <!-- SIDEBAR -->
   <nav class="sidebar">
     <div class="sidebar-logo">
-      <h1>QuizCraft</h1>
+      <h1>DrSacramentoQuiz</h1>
       <p>UK & Cambridge Platform</p>
     </div>
     <div class="sidebar-section">Teacher</div>
@@ -524,7 +524,7 @@ textarea { resize: vertical; line-height: 1.6; }
     <div class="topbar">
       <div>
         <div class="topbar-title" id="topbar-title">Overview</div>
-        <div class="topbar-sub" id="topbar-sub">QuizCraft · UK & Cambridge Assessment Platform</div>
+        <div class="topbar-sub" id="topbar-sub">DrSacramentoQuiz · UK & Cambridge Assessment Platform</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="badge badge-green">Teacher Mode</span>
@@ -730,9 +730,7 @@ textarea { resize: vertical; line-height: 1.6; }
         <div class="card" style="max-width:680px;margin-bottom:16px">
           <div class="card-title">Generate student quiz file</div>
           <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6">Select a published quiz to generate a standalone HTML file. Download it and attach it to a Google Classroom assignment — students open it in any browser, take the quiz, and get instant AI marking.</p>
-          <div id="apiKeyWarning" style="display:none;background:var(--amber-pale);border:1px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--amber)">
-            ⚠ No API key set. Go to <strong>Settings</strong> to add your Anthropic API key — it will be embedded in all downloaded quiz files automatically.
-          </div>
+
           <div class="form-group">
             <label class="lbl">Select live quiz</label>
             <select id="studentQuizSelect" onchange="previewStudentLink()">
@@ -780,29 +778,9 @@ textarea { resize: vertical; line-height: 1.6; }
       <!-- ── SETTINGS ── -->
       <div id="page-settings" class="page">
         <div class="card" style="max-width:600px;margin-bottom:16px">
-          <div class="card-title">Anthropic API Key</div>
-          <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6">
-            Your API key is stored locally in this browser and automatically embedded into every student quiz file you download — you only need to set it once.
-          </p>
-          <div class="form-group">
-            <label class="lbl">API key</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" style="flex:1;font-family:monospace;font-size:12px" />
-              <button class="btn btn-sm" onclick="toggleApiKeyVisibility()" id="btnToggleKey" style="flex-shrink:0">Show</button>
-            </div>
-          </div>
-          <div id="apiKeyStatus" style="font-size:12px;margin-bottom:14px;color:var(--ink3)">Enter your key above and click Save.</div>
-          <button class="btn btn-primary" onclick="saveApiKey()">Save API key</button>
-          <button class="btn btn-sm btn-red" style="margin-left:8px" onclick="clearApiKey()">Clear</button>
-        </div>
-        <div class="card" style="max-width:600px">
-          <div class="card-title">Where to find your API key</div>
-          <p style="font-size:13px;color:var(--ink3);line-height:1.7">
-            1. Go to <strong>console.anthropic.com</strong><br>
-            2. Sign in and click <strong>API Keys</strong> in the left sidebar<br>
-            3. Click <strong>Create Key</strong>, give it a name (e.g. "QuizCraft")<br>
-            4. Copy the key — it starts with <code style="background:var(--paper2);padding:1px 5px;border-radius:3px">sk-ant-</code><br>
-            5. Paste it above and click Save
+          <div class="card-title">API Configuration</div>
+          <p style="font-size:13px;color:var(--ink3);line-height:1.6">
+            AI marking and question generation are powered by a secure server proxy. No API key is required in this browser — all requests are handled automatically.
           </p>
         </div>
       </div>
@@ -836,7 +814,7 @@ textarea { resize: vertical; line-height: 1.6; }
 // ═══════════════════════════════════════════════
 // INDEXEDDB — local persistence
 // ═══════════════════════════════════════════════
-const DB_NAME = 'QuizCraftDB';
+const DB_NAME = 'DrSacramentoQuizDB';
 const DB_VER  = 1;
 const STORE   = 'quizzes';
 let   _db     = null;
@@ -1202,7 +1180,12 @@ Generate ${n} questions total with varied types and difficulty.`;
 // ═══════════════════════════════════════════════
 // API KEY MANAGEMENT
 // ═══════════════════════════════════════════════
-const API_KEY_STORAGE = 'quizcraft_api_key';
+function initApiKeyUI() {}
+function saveApiKey() {}
+function clearApiKey() {}
+function toggleApiKeyVisibility() {}
+function loadApiKey() { return ''; }
+function setApiKeyStatus() {}
 
 function loadApiKey() {
   try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch(e) { return ''; }
