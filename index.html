@@ -659,6 +659,21 @@ textarea { resize: vertical; line-height: 1.6; }
           <!-- RIGHT: bank + actions -->
           <div>
             <div class="card" style="margin-bottom:16px">
+              <div class="card-title">Generate from file</div>
+              <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;line-height:1.6">Upload a document and Claude will generate questions based on its content. Supports PDF, Word (.docx), and plain text files.</p>
+              <div class="form-group">
+                <label class="lbl">Upload file</label>
+                <input type="file" id="b-file" accept=".pdf,.docx,.doc,.txt,.md" style="font-size:13px;padding:6px 0;" onchange="onFileSelected(this)" />
+              </div>
+              <div id="fileInfo" style="display:none;background:var(--accent-pale);border:1px solid var(--accent2);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:10px"></div>
+              <div class="form-group">
+                <label class="lbl">Number of questions to generate</label>
+                <input type="number" id="b-file-qcount" value="5" min="1" max="20" />
+              </div>
+              <button class="btn btn-primary" onclick="genFromFile()" id="btnGenFile" disabled>Generate from file ↗</button>
+            </div>
+
+            <div class="card" style="margin-bottom:16px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div class="card-title" style="margin-bottom:0">Question bank (<span id="qBankCount">0</span>)</div>
                 <button class="btn btn-sm" onclick="genAllAI()" id="btnGenAll">AI generate all ↗</button>
@@ -1176,7 +1191,100 @@ Generate ${n} questions total with varied types and difficulty.`;
 }
 
 // ═══════════════════════════════════════════════
-// SAVE / PUBLISH QUIZ
+// GENERATE FROM FILE
+// ═══════════════════════════════════════════════
+let uploadedFileText = '';
+
+function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const info = document.getElementById('fileInfo');
+  const btn = document.getElementById('btnGenFile');
+  uploadedFileText = '';
+  btn.disabled = true;
+  info.style.display = 'block';
+  info.textContent = 'Reading ' + file.name + '…';
+
+  if (file.type === 'application/pdf') {
+    // Read PDF as base64 and extract text via Claude
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(',')[1];
+      try {
+        const res = await fetch('/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 2000,
+            messages: [{ role: 'user', content: [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+              { type: 'text', text: 'Extract and return the main text content of this document. Return only the text, no commentary.' }
+            ]}]
+          })
+        });
+        const data = await res.json();
+        uploadedFileText = (data.content||[]).map(c=>c.text||'').join('').trim();
+        info.textContent = '✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length/1000) + 'k characters extracted)';
+        btn.disabled = false;
+      } catch(e) {
+        info.textContent = '✗ Could not read PDF. Try a .txt or .docx file.';
+        info.style.background = 'var(--red-pale)'; info.style.borderColor = 'var(--red)'; info.style.color = 'var(--red)';
+      }
+    };
+    reader.readAsDataURL(file);
+  } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+    info.textContent = '✗ Word files cannot be read directly. Please save as .txt or .pdf and re-upload.';
+    info.style.background = 'var(--amber-pale)'; info.style.borderColor = 'var(--amber)'; info.style.color = 'var(--amber)';
+  } else {
+    // Plain text / markdown
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      uploadedFileText = e.target.result.trim();
+      info.style.background = 'var(--accent-pale)'; info.style.borderColor = 'var(--accent2)'; info.style.color = 'var(--accent)';
+      info.textContent = '✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length/1000) + 'k characters)';
+      btn.disabled = false;
+    };
+    reader.readAsText(file);
+  }
+}
+
+async function genFromFile() {
+  if (!uploadedFileText) return;
+  const btn = document.getElementById('btnGenFile');
+  const n = parseInt(document.getElementById('b-file-qcount').value) || 5;
+  const subject = getSubject();
+  const ks = document.getElementById('b-ks').value;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Generating ' + n + ' questions…';
+
+  const excerpt = uploadedFileText.slice(0, 6000);
+  const prompt = `You are an experienced ${ks} ${subject} examiner. Based ONLY on the following document content, generate exactly ${n} varied quiz questions appropriate for ${ks} level.
+Mix question types where possible. Respond ONLY with a JSON array, no markdown:
+[
+  {"type":"mcq","text":"…","options":["…","…","…","…"],"correct":0,"marks":1,"topic":"…"},
+  {"type":"openended","text":"…","markScheme":"key points for marks","marks":4,"topic":"…"},
+  {"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"…"},
+  {"type":"multiselect","text":"…","options":["…","…","…","…"],"correct":[0,2],"marks":2,"topic":"…"}
+]
+Generate ${n} questions total. Base all questions strictly on the document content below.
+
+DOCUMENT CONTENT:
+${excerpt}`;
+
+  try {
+    const raw = await callClaude(prompt, 2000);
+    const arr = JSON.parse(raw);
+    let added = 0;
+    arr.forEach((q, i) => { if (q.text) { builderQs.push({ id: Date.now()+i, ks, ...q }); added++; } });
+    renderBank();
+    document.getElementById('fileInfo').textContent = '✓ ' + added + ' questions generated from file and added to question bank.';
+  } catch(e) {
+    alert('Generation from file failed. Try again or reduce the file size.');
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Generate from file ↗';
+}
 // ═══════════════════════════════════════════════
 // ═══════════════════════════════════════════════
 // API KEY MANAGEMENT
