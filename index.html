@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>if(new URLSearchParams(window.location.search).get('quiz')){document.documentElement.style.visibility='hidden';}</script>
 <style>
 :root {
   --ink: #1a1814;
@@ -1406,23 +1407,24 @@ function copyQuizLink(id) {
 function checkQuizURLParam() {
   const params = new URLSearchParams(window.location.search);
   const quizId = params.get('quiz');
-  if (!quizId) return;
+  if (!quizId) { document.documentElement.style.visibility = ''; return; }
   const q = quizzes.find(q => q.id === quizId);
   if (!q || q.status !== 'live') {
+    document.documentElement.style.visibility = '';
     document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Quiz not available</h2><p style="color:#8a8480">This quiz is not currently active. Please ask your teacher for an updated link.</p></div>';
     return;
   }
+  document.documentElement.style.visibility = '';
   const name = prompt('Please enter your full name to begin:');
   if (!name || !name.trim()) { window.location.href = window.location.pathname; return; }
   studentName = name.trim();
   studentAnswers = {}; aiMarkingStore = {};
   activeQuiz = q;
+  document.querySelector('.shell').style.display = 'none';
   pregenerateSVGs(q, null).then(() => {
     renderStudentQuiz();
-    const overlay = document.getElementById('quizOverlay');
-    overlay.classList.add('open');
-    overlay.style.cssText = 'display:block;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;overflow-y:auto;background:var(--ink)';
-    document.querySelector('.shell').style.display = 'none';
+    document.getElementById('quizSubmitRow').style.display = 'block';
+    document.getElementById('quizOverlay').classList.add('open');
   });
 }
 
