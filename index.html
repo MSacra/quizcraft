@@ -1380,7 +1380,7 @@ function renderQuizTable() {
       <td>
         <div style="display:flex;gap:4px">
           ${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="publishQuiz('${q.id}')">Publish</button>`:''}
-          ${q.status==='live'?`<button class="btn btn-sm" onclick="closeQuiz('${q.id}')">Close</button>`:''}
+          ${q.status==='live'?`<button class="btn btn-sm" onclick="closeQuiz('${q.id}')">Close</button>`:''} ${q.status==='live'?`<button class="btn btn-sm btn-primary" onclick="copyQuizLink('${q.id}')" title="Copy student link">&#128279; Copy link</button>`:''}
           <button class="btn btn-sm" onclick="nav('analytics');document.getElementById('analyticsQuizSelect').value='${q.id}';loadAnalytics()">Analytics</button>
           <button class="btn btn-sm btn-red" onclick="deleteQuiz('${q.id}')">Delete</button>
         </div>
@@ -1391,6 +1391,44 @@ function renderQuizTable() {
 function publishQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q){q.status='live';q.submissions=simulateSubmissions(q.questions,'live');} renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
 function closeQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q) q.status='closed'; renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
 function deleteQuiz(id) { if(confirm('Delete this quiz?')){ quizzes=quizzes.filter(q=>q.id!==id); renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); } }
+
+function copyQuizLink(id) {
+  const url = window.location.origin + window.location.pathname + '?quiz=' + encodeURIComponent(id);
+  navigator.clipboard.writeText(url).then(() => {
+    const btns = document.querySelectorAll('#quizTableBody button');
+    btns.forEach(b => { if (b.onclick && b.onclick.toString().includes(id) && b.textContent.includes('Copy')) {
+      const orig = b.innerHTML; b.innerHTML = '✓ Copied!'; b.style.background='var(--accent)'; b.style.color='#fff';
+      setTimeout(() => { b.innerHTML = orig; b.style.background=''; b.style.color=''; }, 2000);
+    }});
+  }).catch(() => { prompt('Copy this link:', window.location.origin + window.location.pathname + '?quiz=' + encodeURIComponent(id)); });
+}
+
+function checkQuizURLParam() {
+  const params = new URLSearchParams(window.location.search);
+  const quizId = params.get('quiz');
+  if (!quizId) return;
+  const q = quizzes.find(q => q.id === quizId);
+  if (!q || q.status !== 'live') {
+    document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Quiz not available</h2><p style="color:#8a8480">This quiz is not currently active. Please ask your teacher for an updated link.</p></div>';
+    return;
+  }
+  const name = prompt('Please enter your full name to begin:');
+  if (!name || !name.trim()) { window.location.href = window.location.pathname; return; }
+  studentName = name.trim();
+  studentAnswers = {}; aiMarkingStore = {};
+  activeQuiz = q;
+  document.querySelector('.shell').style.display = 'none';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'min-height:100vh;background:var(--paper2)';
+  document.body.appendChild(wrapper);
+  pregenerateSVGs(q, null).then(() => {
+    renderStudentQuiz();
+    document.getElementById('quizOverlay').style.position = 'relative';
+    document.getElementById('quizOverlay').style.height = 'auto';
+    document.getElementById('quizOverlay').classList.add('open');
+    wrapper.appendChild(document.getElementById('quizOverlay'));
+  });
+}
 
 // ═══════════════════════════════════════════════
 // LIVE MONITOR
@@ -2278,6 +2316,7 @@ initApiKeyUI();
   }
   updateOverview();
   refreshAllSelects();
+  checkQuizURLParam();
 })();
 </script>
 </body>
