@@ -659,6 +659,36 @@ textarea { resize: vertical; line-height: 1.6; }
           <!-- RIGHT: bank + actions -->
           <div>
             <div class="card" style="margin-bottom:16px">
+              <div class="card-title">Generate from file or URL</div>
+              <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;line-height:1.6">Upload a document or paste a URL and Claude will generate questions from its content.</p>
+              <div style="display:flex;gap:6px;margin-bottom:12px">
+                <button class="qt-btn active" id="srcTabFile" onclick="switchSrcTab('file')">Upload file</button>
+                <button class="qt-btn" id="srcTabUrl" onclick="switchSrcTab('url')">From URL</button>
+              </div>
+              <div id="srcFile">
+                <div class="form-group">
+                  <label class="lbl">File (PDF, TXT, images, etc.)</label>
+                  <input type="file" id="b-file" accept="*/*" style="font-size:13px;padding:6px 0;" onchange="onFileSelected(this)" />
+                </div>
+              </div>
+              <div id="srcUrl" style="display:none">
+                <div class="form-group">
+                  <label class="lbl">Page URL</label>
+                  <div style="display:flex;gap:6px">
+                    <input type="text" id="b-url" placeholder="https://..." style="flex:1" />
+                    <button class="btn btn-sm" onclick="fetchURL()">Fetch</button>
+                  </div>
+                </div>
+              </div>
+              <div id="fileInfo" style="display:none;border-radius:var(--r);padding:8px 12px;font-size:12px;margin-bottom:10px"></div>
+              <div class="form-group" style="margin-top:8px">
+                <label class="lbl">Number of questions to generate</label>
+                <input type="number" id="b-file-qcount" value="5" min="1" max="20" />
+              </div>
+              <button class="btn btn-primary" onclick="genFromFile()" id="btnGenFile" disabled>Generate from content ↗</button>
+            </div>
+
+            <div class="card" style="margin-bottom:16px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div class="card-title" style="margin-bottom:0">Question bank (<span id="qBankCount">0</span>)</div>
                 <button class="btn btn-sm" onclick="genAllAI()" id="btnGenAll">AI generate all ↗</button>
@@ -779,11 +809,7 @@ textarea { resize: vertical; line-height: 1.6; }
       <!-- ── SETTINGS ── -->
       <div id="page-settings" class="page">
         <div class="card" style="max-width:600px;margin-bottom:16px">
-          <div class="card-title">API Configuration</div>
-          <p style="font-size:13px;color:var(--ink3);line-height:1.6">AI marking and question generation are handled by a secure server proxy. No API key needed in the browser.</p>
-        </div>
-        <div class="card" style="max-width:600px;display:none">
-          <div class="card-title">hidden</div>
+          <div class="card-title">Anthropic API Key</div>
           <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6">
             Your API key is stored locally in this browser and automatically embedded into every student quiz file you download — you only need to set it once.
           </p>
@@ -1205,6 +1231,7 @@ Generate ${n} questions total with varied types and difficulty.`;
 // ═══════════════════════════════════════════════
 // API KEY MANAGEMENT
 // ═══════════════════════════════════════════════
+const API_KEY_STORAGE='';
 function initApiKeyUI(){}
 function saveApiKey(){}
 function clearApiKey(){}
@@ -2184,7 +2211,6 @@ async function submitStudentQuiz() {
   activeQuiz.submissions.push(sub);
   updateOverview();
   persistQuizzes();
-  fetch('/api/quiz-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quizId:activeQuiz.id,submission:sub})}).catch(()=>{});
 
   var banner = document.createElement('div');
   banner.style.cssText = 'background:var(--ink);color:#fff;padding:28px;text-align:center;border-radius:var(--r2);margin-bottom:24px';
@@ -2274,36 +2300,35 @@ function buildDemoQuizzes() {
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-renderQForm();
-initApiKeyUI();
 
-// ── COPY QUIZ LINK ──
+// === COPY QUIZ LINK ===
 function copyQuizLink(id) {
-  const url = window.location.origin + window.location.pathname + '?quiz=' + encodeURIComponent(id);
-  navigator.clipboard.writeText(url).then(() => {
-    document.querySelectorAll('#quizTableBody button').forEach(b => {
-      if ((b.getAttribute('onclick')||'').includes(id) && b.textContent.includes('Copy')) {
-        const orig = b.innerHTML;
-        b.innerHTML = '✓ Copied!'; b.style.background='var(--accent)'; b.style.color='#fff';
-        setTimeout(() => { b.innerHTML = orig; b.style.background=''; b.style.color=''; }, 2000);
+  var url = window.location.origin + window.location.pathname + '?quiz=' + encodeURIComponent(id);
+  navigator.clipboard.writeText(url).then(function() {
+    document.querySelectorAll('#quizTableBody button').forEach(function(b) {
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(id) && b.textContent.includes('Copy')) {
+        var orig = b.innerHTML;
+        b.innerHTML = '✓ Copied!';
+        b.style.background = 'var(--accent)'; b.style.color = '#fff';
+        setTimeout(function(){ b.innerHTML = orig; b.style.background = ''; b.style.color = ''; }, 2000);
       }
     });
-  }).catch(() => prompt('Copy this link:', url));
+  }).catch(function(){ prompt('Copy this link:', url); });
 }
 
-// ── STUDENT URL ROUTING ──
+// === STUDENT URL ROUTING ===
 function checkQuizURLParam() {
-  const params = new URLSearchParams(window.location.search);
-  const quizId = params.get('quiz');
+  var params = new URLSearchParams(window.location.search);
+  var quizId = params.get('quiz');
   if (!quizId) { document.documentElement.style.visibility = ''; return; }
-  const q = quizzes.find(q => q.id === quizId);
+  var q = quizzes.find(function(x){ return x.id === quizId; });
   if (!q || q.status !== 'live') {
     document.documentElement.style.visibility = '';
     document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Quiz not available</h2><p style="color:#8a8480">This quiz is not currently active. Please ask your teacher for an updated link.</p></div>';
     return;
   }
   document.documentElement.style.visibility = '';
-  const name = prompt('Please enter your full name to begin:');
+  var name = prompt('Please enter your full name to begin:');
   if (!name || !name.trim()) { window.location.href = window.location.pathname; return; }
   studentName = name.trim();
   studentAnswers = {}; aiMarkingStore = {};
@@ -2311,55 +2336,144 @@ function checkQuizURLParam() {
   document.querySelector('.shell').style.display = 'none';
   document.getElementById('quizOverlay').classList.add('open');
   document.getElementById('quizPlayerBody').innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)"><div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading your quiz...</div><div style="font-size:13px;opacity:0.6">Just a moment, ' + name.trim() + '</div></div>';
-  setTimeout(() => {
+  setTimeout(function() {
     renderStudentQuiz();
     document.getElementById('quizSubmitRow').style.display = 'block';
-    pregenerateSVGs(q, null).then(() => persistQuizzes());
+    pregenerateSVGs(q, null).then(function(){ persistQuizzes(); });
   }, 50);
 }
 
-// ── MONITOR: fetch server submissions ──
-function loadMonitor() {
-  const id = document.getElementById('monitorQuizSelect').value;
-  const q = quizzes.find(q => q.id === id);
-  const stats = document.getElementById('monitorStats');
-  const list = document.getElementById('monitorStudentList');
-  if (!q) { stats.style.display='none'; list.innerHTML='<div class="empty">Select a quiz.</div>'; return; }
-  stats.style.display = 'block';
-  list.innerHTML = '<div class="empty">Loading submissions...</div>';
-  fetch('/api/quiz-results?quizId=' + encodeURIComponent(id))
-    .then(r => r.json())
-    .then(data => {
-      if (data.submissions && data.submissions.length) {
-        const existing = new Set((q.submissions||[]).map(s => s.name + '|' + s.submittedAt));
-        data.submissions.forEach(s => {
-          if (!existing.has(s.name + '|' + s.submittedAt)) {
-            q.submissions = q.submissions || [];
-            q.submissions.push(s);
-            existing.add(s.name + '|' + s.submittedAt);
-          }
+
+// === FILE / URL GENERATION ===
+var uploadedFileText = '';
+
+function switchSrcTab(tab) {
+  document.getElementById('srcFile').style.display = tab === 'file' ? '' : 'none';
+  document.getElementById('srcUrl').style.display = tab === 'url' ? '' : 'none';
+  document.getElementById('srcTabFile').classList.toggle('active', tab === 'file');
+  document.getElementById('srcTabUrl').classList.toggle('active', tab === 'url');
+  uploadedFileText = '';
+  document.getElementById('btnGenFile').disabled = true;
+  document.getElementById('fileInfo').style.display = 'none';
+}
+
+function setFileInfo(msg, type) {
+  var info = document.getElementById('fileInfo');
+  info.style.display = 'block';
+  info.textContent = msg;
+  if (type === 'ok')   { info.style.background='var(--accent-pale)'; info.style.border='1px solid var(--accent2)'; info.style.color='var(--accent)'; }
+  if (type === 'warn') { info.style.background='var(--amber-pale)';  info.style.border='1px solid var(--amber)';   info.style.color='var(--amber)'; }
+  if (type === 'err')  { info.style.background='var(--red-pale)';    info.style.border='1px solid var(--red)';     info.style.color='var(--red)'; }
+}
+
+async function fetchURL() {
+  var url = document.getElementById('b-url').value.trim();
+  if (!url) return;
+  uploadedFileText = '';
+  document.getElementById('btnGenFile').disabled = true;
+  setFileInfo('Fetching ' + url + '...', 'ok');
+  try {
+    var res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: 'Fetch and extract the main text content from this URL: ' + url + '. Return only the page text, no commentary.' }]
+      })
+    });
+    var data = await res.json();
+    uploadedFileText = (data.content || []).map(function(c){ return c.type === 'text' ? c.text : ''; }).join('').trim();
+    if (!uploadedFileText) throw new Error('No content');
+    setFileInfo('✓ Page fetched — ' + Math.round(uploadedFileText.length / 1000) + 'k characters extracted', 'ok');
+    document.getElementById('btnGenFile').disabled = false;
+  } catch(e) {
+    setFileInfo('✗ Could not fetch URL. Try copying the page text into a .txt file instead.', 'err');
+  }
+}
+
+function onFileSelected(input) {
+  var file = input.files[0];
+  if (!file) return;
+  uploadedFileText = '';
+  document.getElementById('btnGenFile').disabled = true;
+  setFileInfo('Reading ' + file.name + '...', 'ok');
+
+  var isPDF   = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+  var isImage = file.type.startsWith('image/');
+  var isText  = file.type.startsWith('text/') || /\.(txt|md|csv|html|htm|js|py|json)$/i.test(file.name);
+
+  if (isText) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      uploadedFileText = e.target.result.trim();
+      setFileInfo('✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length / 1000) + 'k chars)', 'ok');
+      document.getElementById('btnGenFile').disabled = false;
+    };
+    reader.readAsText(file);
+  } else {
+    // PDF, image, Word, PPT — send as base64 to Claude for extraction
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      var base64 = e.target.result.split(',')[1];
+      var mediaType = isPDF ? 'application/pdf' : (isImage ? file.type : 'application/octet-stream');
+      var block = (isPDF || isImage)
+        ? (isPDF ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+                 : { type: 'image',    source: { type: 'base64', media_type: mediaType,           data: base64 } })
+        : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
+      try {
+        var res = await fetch('/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+            messages: [{ role: 'user', content: [
+              block,
+              { type: 'text', text: 'Extract and return all the main text content from this file (' + file.name + '). Return only the text, no commentary.' }
+            ]}]
+          })
         });
-        persistQuizzes(); updateOverview(); refreshAllSelects();
+        var data = await res.json();
+        uploadedFileText = (data.content || []).map(function(c){ return c.text || ''; }).join('').trim();
+        if (!uploadedFileText || uploadedFileText.length < 20) throw new Error();
+        setFileInfo('✓ ' + file.name + ' ready (' + Math.round(uploadedFileText.length / 1000) + 'k chars extracted)', 'ok');
+        document.getElementById('btnGenFile').disabled = false;
+      } catch(e) {
+        setFileInfo('✗ Could not extract text from ' + file.name + '. Try saving as PDF or .txt first.', 'warn');
       }
-      renderMonitorList(q);
-    })
-    .catch(() => renderMonitorList(q));
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
-function renderMonitorList(q) {
-  const subs = q.submissions || [];
-  document.getElementById('mon-submitted').textContent = subs.length;
-  document.getElementById('mon-inprogress').textContent = 0;
-  const list = document.getElementById('monitorStudentList');
-  if (!subs.length) { list.innerHTML = '<div class="empty">No submissions yet.</div>'; return; }
-  list.innerHTML = subs.map(s => '<div class="student-row">' +
-    '<div class="avatar">' + s.name.split(' ').map(n=>n[0]).join('') + '</div>' +
-    '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + s.name + '</div>' +
-    '<div style="font-size:11px;color:var(--ink3)">' + s.pct + '% · ' + s.earned + '/' + s.possible + ' marks · ' + new Date(s.submittedAt).toLocaleString('en-GB') + '</div></div>' +
-    '<div class="progress-bar-wrap" style="max-width:100px"><div class="progress-bar" style="width:' + s.pct + '%"></div></div>' +
-    '<span class="badge badge-green" style="min-width:52px;text-align:center">' + s.pct + '%</span></div>').join('');
+async function genFromFile() {
+  if (!uploadedFileText) return;
+  var btn = document.getElementById('btnGenFile');
+  var n = parseInt(document.getElementById('b-file-qcount').value) || 5;
+  var subject = getSubject();
+  var ks = document.getElementById('b-ks').value;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Generating ' + n + ' questions...';
+  var excerpt = uploadedFileText.slice(0, 6000);
+  var prompt = 'You are an experienced ' + ks + ' ' + subject + ' examiner. Based ONLY on the document content below, generate exactly ' + n + ' varied quiz questions for ' + ks + ' level.\nMix question types. Respond ONLY with a JSON array, no markdown:\n[{"type":"mcq","text":"...","options":["...","...","...","..."],"correct":0,"marks":1,"topic":"..."},\n{"type":"openended","text":"...","markScheme":"key points","marks":4,"topic":"..."},\n{"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"..."},\n{"type":"multiselect","text":"...","options":["...","...","...","..."],"correct":[0,2],"marks":2,"topic":"..."}]\nGenerate ' + n + ' questions total strictly from this content:\n' + excerpt;
+  try {
+    var raw = await callClaude(prompt, 2000);
+    var arr = JSON.parse(raw);
+    var added = 0;
+    arr.forEach(function(q, i) {
+      if (q.text) { builderQs.push({ id: Date.now() + i, ks: ks, ...q }); added++; }
+    });
+    renderBank();
+    setFileInfo('✓ ' + added + ' questions added to question bank.', 'ok');
+  } catch(e) {
+    alert('Generation failed. Please try again.');
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Generate from content ↗';
 }
 
+renderQForm();
+initApiKeyUI();
 (async () => {
   try {
     const saved = await dbLoadAll();
