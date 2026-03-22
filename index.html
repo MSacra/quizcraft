@@ -1647,23 +1647,37 @@ function loadMonitor() {
   const stats = document.getElementById('monitorStats');
   const list = document.getElementById('monitorStudentList');
   if (!q) { stats.style.display='none'; list.innerHTML='<div class="empty">Select a quiz.</div>'; return; }
+  list.innerHTML = '<div class="empty"><span class="spinner"></span> Loading submissionsu2026</div>';
   stats.style.display='block';
+  fetch('/api/quiz-results?quizId=' + encodeURIComponent(id))
+    .then(r => r.json())
+    .then(data => {
+      if (data.submissions && data.submissions.length) {
+        const existing = new Set((q.submissions||[]).map(s=>s.name+'|'+s.submittedAt));
+        data.submissions.forEach(s => {
+          if (!existing.has(s.name+'|'+s.submittedAt)) {
+            q.submissions = q.submissions || [];
+            q.submissions.push(s);
+            existing.add(s.name+'|'+s.submittedAt);
+          }
+        });
+        persistQuizzes(); updateOverview(); refreshAllSelects();
+      }
+      renderMonitorList(q);
+    })
+    .catch(() => renderMonitorList(q));
+}
+
+function renderMonitorList(q) {
+  const stats = document.getElementById('monitorStats');
+  const list = document.getElementById('monitorStudentList');
+  stats.style.display = 'block';
   const subs = q.submissions||[];
   document.getElementById('mon-submitted').textContent = subs.length;
-  document.getElementById('mon-inprogress').textContent = Math.floor(Math.random()*3);
+  document.getElementById('mon-inprogress').textContent = 0;
   if (!subs.length) { list.innerHTML='<div class="empty">No submissions yet.</div>'; return; }
-  list.innerHTML = subs.map(s=>`
-    <div class="student-row">
-      <div class="avatar">${s.name.split(' ').map(n=>n[0]).join('')}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${s.name}</div>
-        <div style="font-size:11px;color:var(--ink3)">${s.pct}% · ${s.earned}/${s.possible} marks</div>
-      </div>
-      <div class="progress-bar-wrap" style="max-width:100px">
-        <div class="progress-bar" style="width:${s.pct}%"></div>
-      </div>
-      <span class="badge badge-green" style="min-width:52px;text-align:center">${s.pct}%</span>
-    </div>`).join('');
+  list.innerHTML = subs.map(s=>`<div class="student-row"><div class="avatar">${s.name.split(" ").map(n=>n[0]).join("")}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${s.name}</div><div style="font-size:11px;color:var(--ink3)">${s.pct}%   ${s.earned}/${s.possible} marks   ${new Date(s.submittedAt).toLocaleString("en-GB")}</div></div><div class="progress-bar-wrap" style="max-width:100px"><div class="progress-bar" style="width:${s.pct}%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">${s.pct}%</span></div>`).join(');
+}
 }
 
 // ═══════════════════════════════════════════════
@@ -2408,6 +2422,13 @@ async function submitStudentQuiz() {
   activeQuiz.submissions.push(sub);
   updateOverview();
   persistQuizzes();
+
+  // Also save to server so teacher can see it on any device
+  fetch('/api/quiz-submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quizId: activeQuiz.id, submission: sub })
+  }).catch(e => console.warn('Could not save submission to server:', e));
 
   var banner = document.createElement('div');
   banner.style.cssText = 'background:var(--ink);color:#fff;padding:28px;text-align:center;border-radius:var(--r2);margin-bottom:24px';
