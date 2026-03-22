@@ -2370,24 +2370,27 @@ async function fetchURL() {
   if (!url) return;
   uploadedFileText = '';
   document.getElementById('btnGenFile').disabled = true;
-  setFileInfo('Fetching ' + url + '...', 'ok');
+  setFileInfo('Fetching page content...', 'ok');
   try {
-    var res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: 'Fetch and extract the main text content from this URL: ' + url + '. Return only the page text, no commentary.' }]
-      })
-    });
+    // Use allorigins CORS proxy to fetch the page HTML
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    var res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Fetch failed');
     var data = await res.json();
-    uploadedFileText = (data.content || []).map(function(c){ return c.type === 'text' ? c.text : ''; }).join('').trim();
-    if (!uploadedFileText) throw new Error('No content');
+    var rawHtml = data.contents || '';
+    if (!rawHtml) throw new Error('Empty response');
+    // Strip HTML tags to get plain text
+    var tmp = document.createElement('div');
+    tmp.innerHTML = rawHtml;
+    // Remove script and style elements
+    tmp.querySelectorAll('script,style,nav,footer,header').forEach(function(el){ el.remove(); });
+    var text = (tmp.innerText || tmp.textContent || '').replace(/\s{3,}/g, '\n').trim();
+    if (!text || text.length < 100) throw new Error('No readable content found');
+    uploadedFileText = text.slice(0, 8000);
     setFileInfo('✓ Page fetched — ' + Math.round(uploadedFileText.length / 1000) + 'k characters extracted', 'ok');
     document.getElementById('btnGenFile').disabled = false;
   } catch(e) {
-    setFileInfo('✗ Could not fetch URL. Try copying the page text into a .txt file instead.', 'err');
+    setFileInfo('✗ Could not fetch URL: ' + e.message + '. Try copying the page text into a .txt file instead.', 'err');
   }
 }
 
@@ -2416,7 +2419,7 @@ function onFileSelected(input) {
     var reader = new FileReader();
     reader.onload = async function(e) {
       try {
-        // Load PDF.js if not already loaded
+        // Step 1: Try PDF.js text extraction (works for text-based PDFs)
         if (!window.pdfjsLib) {
           await new Promise(function(resolve, reject) {
             var s = document.createElement('script');
@@ -2430,7 +2433,8 @@ function onFileSelected(input) {
             document.head.appendChild(s);
           });
         }
-        var typedArray = new Uint8Array(e.target.result);
+        var arrayBuf = e.target.result;
+        var typedArray = new Uint8Array(arrayBuf);
         var pdf = await window.pdfjsLib.getDocument({ data: typedArray }).promise;
         var text = '';
         for (var i = 1; i <= Math.min(pdf.numPages, 30); i++) {
@@ -2438,12 +2442,41 @@ function onFileSelected(input) {
           var content = await page.getTextContent();
           text += content.items.map(function(item){ return item.str; }).join(' ') + '\n';
         }
-        uploadedFileText = text.trim();
-        if (!uploadedFileText || uploadedFileText.length < 20) throw new Error('No text found');
-        setFileInfo('✓ ' + file.name + ' ready (' + pdf.numPages + ' pages, ' + Math.round(uploadedFileText.length / 1000) + 'k chars)', 'ok');
-        document.getElementById('btnGenFile').disabled = false;
+        text = text.trim();
+
+        if (text.length >= 50) {
+          // Text-based PDF — use extracted text directly
+          uploadedFileText = text;
+          setFileInfo('✓ ' + file.name + ' ready (' + pdf.numPages + ' pages, ' + Math.round(uploadedFileText.length / 1000) + 'k chars)', 'ok');
+          document.getElementById('btnGenFile').disabled = false;
+        } else {
+          // Step 2: Scanned PDF — send to Claude via proxy in chunks under 700KB base64
+          setFileInfo('Scanned PDF detected — sending to Claude for OCR...', 'ok');
+          var base64Full = btoa(String.fromCharCode.apply(null, typedArray));
+          // If under 700KB base64, send directly; otherwise warn
+          if (base64Full.length > 700000) {
+            setFileInfo('✗ Scanned PDF is too large (' + Math.round(base64Full.length/1000) + 'KB). Please reduce to under 500KB or convert first page to image.', 'warn');
+            return;
+          }
+          var res = await fetch('/api/claude', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+              messages: [{ role: 'user', content: [
+                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Full } },
+                { type: 'text', text: 'Extract and return all the text content from this scanned document. Return only the text, no commentary.' }
+              ]}]
+            })
+          });
+          var data = await res.json();
+          uploadedFileText = (data.content || []).map(function(c){ return c.text || ''; }).join('').trim();
+          if (!uploadedFileText || uploadedFileText.length < 20) throw new Error('OCR returned no content');
+          setFileInfo('✓ ' + file.name + ' ready (OCR: ' + Math.round(uploadedFileText.length / 1000) + 'k chars extracted)', 'ok');
+          document.getElementById('btnGenFile').disabled = false;
+        }
       } catch(err) {
-        setFileInfo('✗ Could not extract text from PDF: ' + err.message, 'warn');
+        setFileInfo('✗ Could not read PDF: ' + err.message + '. Try saving as .txt or screenshot as image.', 'warn');
       }
     };
     reader.readAsArrayBuffer(file);
