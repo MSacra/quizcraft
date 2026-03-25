@@ -750,6 +750,10 @@ textarea { resize: vertical; line-height: 1.6; }
 
       <!-- ── LIVE MONITOR ── -->
       <div id="page-monitor" class="page">
+        <div id="classroomConnectBar" style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--blue);display:flex;justify-content:space-between;align-items:center">
+          <span>Connect Google Classroom to post grades and comments directly to assignments.</span>
+          <button class="btn btn-sm" onclick="connectGoogleClassroom()" style="flex-shrink:0;margin-left:12px">Connect Google Classroom</button>
+        </div>
         <div class="grid2" style="align-items:start">
           <div class="card">
             <div class="card-title">Select live quiz</div>
@@ -1549,7 +1553,13 @@ function loadMonitor() {
       document.getElementById('mon-submitted').textContent=subs.length;
       document.getElementById('mon-inprogress').textContent=0;
       if(!subs.length){list.innerHTML='<div class="empty">No submissions yet.</div>';return;}
-      list.innerHTML=subs.map(s=>'<div class="student-row"><div class="avatar">'+s.name.split(' ').map(n=>n[0]).join('')+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(s.submittedAt?' / '+new Date(s.submittedAt).toLocaleString('en-GB'):'' )+'</div></div><div class="progress-bar-wrap" style="max-width:100px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">'+s.pct+'%</span></div>').join('');
+      var gcConnected = document.cookie.includes('gc_token');
+      list.innerHTML=subs.map(function(s,si){
+        var initials=s.name.split(' ').map(function(n){return n[0];}).join('');
+        var time=s.submittedAt?new Date(s.submittedAt).toLocaleString('en-GB'):'';
+        var gcBtn=gcConnected?'<button class="btn btn-sm" style="font-size:11px;margin-left:8px" onclick="postToClassroom('+si+',''+id+'')">Post to Classroom</button>':'';
+        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center;margin-left:8px">'+s.pct+'%</span>'+gcBtn+'</div></div>';
+      }).join('');
     }).catch(()=>{list.innerHTML='<div class="empty">Could not load.</div>';});
 }
 
@@ -2648,6 +2658,84 @@ function getAIContext(){
 }
 
 
+// === GOOGLE CLASSROOM INTEGRATION ===
+function connectGoogleClassroom() {
+  window.location.href = '/api/auth/google';
+}
+
+function checkClassroomAuth() {
+  var params = new URLSearchParams(window.location.search);
+  var auth = params.get('auth');
+  if (auth === 'success') {
+    document.getElementById('classroomConnectBar').innerHTML = '<span style="color:var(--accent)">Google Classroom connected!</span><button class="btn btn-sm btn-red" style="margin-left:12px" onclick="disconnectClassroom()">Disconnect</button>';
+    document.getElementById('classroomConnectBar').style.background='var(--accent-pale)';
+    document.getElementById('classroomConnectBar').style.borderColor='var(--accent2)';
+    document.getElementById('classroomConnectBar').style.color='var(--accent)';
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  } else if (auth === 'error') {
+    alert('Google Classroom connection failed. Please try again.');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  // Hide bar if already connected
+  if (document.cookie.includes('gc_token')) {
+    var bar = document.getElementById('classroomConnectBar');
+    if (bar) {
+      bar.innerHTML = '<span style="color:var(--accent)">Google Classroom connected</span>'
+        + '<button class="btn btn-sm btn-red" style="margin-left:12px" onclick="disconnectClassroom()">Disconnect</button>';
+      bar.style.background='var(--accent-pale)';
+      bar.style.borderColor='var(--accent2)';
+      bar.style.color='var(--accent)';
+    }
+  }
+}
+
+function disconnectClassroom() {
+  document.cookie = 'gc_token=; Path=/; Max-Age=0';
+  window.location.reload();
+}
+
+function postToClassroom(subIndex, quizId) {
+  var q = quizzes.find(function(x){ return x.id===quizId; });
+  if (!q) { alert('Quiz not found.'); return; }
+  var sub = (q.submissions||[])[subIndex];
+  if (!sub) { alert('Submission not found.'); return; }
+
+  // Ask for Classroom details
+  var courseId = prompt('Enter your Google Classroom Course ID:\n(Find it in the Classroom URL: classroom.google.com/c/COURSE_ID)');
+  if (!courseId) return;
+  var courseWorkId = prompt('Enter the Assignment ID:\n(Find it in the assignment URL: .../w/ASSIGNMENT_ID/...)');
+  if (!courseWorkId) return;
+  var studentEmail = prompt('Enter the student\'s Google account email:');
+  if (!studentEmail) return;
+
+  var comment = 'DrSacramentoQuiz Result for ' + sub.name + ':\n'
+    + 'Score: ' + sub.pct + '% (' + Math.round(sub.earned) + '/' + sub.possible + ' marks)\n'
+    + 'Grade: ' + getGrade(sub.pct, q.ks) + '\n'
+    + 'Submitted: ' + (sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('en-GB') : 'N/A') + '\n'
+    + 'Attempt: ' + (sub.attempt || 1);
+
+  fetch('/api/classroom-post', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      courseId: courseId,
+      courseWorkId: courseWorkId,
+      studentEmail: studentEmail,
+      comment: comment,
+      grade: sub.earned,
+      maxGrade: sub.possible
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.ok) alert('Posted to Google Classroom successfully!');
+    else alert('Error: ' + (data.error || 'Unknown error'));
+  })
+  .catch(function(e){ alert('Failed to post: ' + e.message); });
+}
+
+
 renderQForm();
 initApiKeyUI();
 (async () => {
@@ -2679,6 +2767,7 @@ initApiKeyUI();
   updateOverview();
   refreshAllSelects();
   setTimeout(checkQuizURLParam, 100);
+  checkClassroomAuth();
 })();
 </script>
 </body>
