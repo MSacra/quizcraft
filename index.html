@@ -1312,22 +1312,107 @@ function saveQuiz(status) {
   const ks = document.getElementById('b-ks').value;
   const cls = document.getElementById('b-class').value.trim();
   if (!builderQs.length) { alert('Add at least one question.'); return; }
-  const quiz = {
-    id: 'qz-' + Date.now(),
-    title, subject, ks, cls,
-    status,
-    questions: JSON.parse(JSON.stringify(builderQs)),
-    createdAt: new Date().toLocaleDateString('en-GB'),
-    submissions: simulateSubmissions(builderQs, status)
-  };
-  quizzes.push(quiz);
+
+  if (editingQuizId) {
+    // Update existing quiz
+    const existing = quizzes.find(function(q){ return q.id === editingQuizId; });
+    if (existing) {
+      existing.title = title;
+      existing.subject = subject;
+      existing.ks = ks;
+      existing.cls = cls;
+      existing.questions = JSON.parse(JSON.stringify(builderQs));
+      existing.status = status;
+      // Clear SVGs so they regenerate on next publish
+      existing.questions.forEach(function(q){ q._svg = null; });
+    }
+    editingQuizId = null;
+    var banner = document.getElementById('editModeBanner');
+    if (banner) banner.remove();
+    alert('Quiz "' + title + '" updated successfully!');
+  } else {
+    // Create new quiz
+    const quiz = {
+      id: 'qz-' + Date.now(),
+      title, subject, ks, cls,
+      status,
+      questions: JSON.parse(JSON.stringify(builderQs)),
+      createdAt: new Date().toLocaleDateString('en-GB'),
+      submissions: simulateSubmissions(builderQs, status)
+    };
+    quizzes.push(quiz);
+    alert('Quiz "' + title + '" ' + (status==='live'?'published':'saved as draft') + ' successfully!');
+  }
+
   builderQs = [];
   renderBank();
   updateOverview();
   refreshAllSelects();
   persistQuizzes();
-  alert(`Quiz "${title}" ${status==='live'?'published':'saved as draft'} successfully!`);
   nav('quizzes');
+}
+
+function duplicateQuiz(id) {
+  const src = quizzes.find(function(q){ return q.id === id; });
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = 'qz-' + Date.now();
+  copy.title = 'Copy of ' + src.title;
+  copy.status = 'draft';
+  copy.submissions = [];
+  copy.createdAt = new Date().toLocaleDateString('en-GB');
+  quizzes.push(copy);
+  renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes();
+  alert('Quiz duplicated as draft: "' + copy.title + '"');
+}
+
+var editingQuizId = null;
+
+function editQuiz(id) {
+  const q = quizzes.find(function(x){ return x.id === id; });
+  if (!q) return;
+  // Load quiz into builder
+  editingQuizId = id;
+  document.getElementById('b-title').value = q.title || '';
+  document.getElementById('b-class').value = q.cls || '';
+  document.getElementById('b-ks').value = q.ks || 'KS4 (GCSE)';
+  // Set subject
+  const subSel = document.getElementById('b-subject');
+  var found = false;
+  for (var i = 0; i < subSel.options.length; i++) {
+    if (subSel.options[i].value === q.subject || subSel.options[i].text === q.subject) {
+      subSel.selectedIndex = i; found = true; break;
+    }
+  }
+  if (!found) {
+    subSel.value = '__other__';
+    document.getElementById('b-subject-custom').value = q.subject || '';
+    document.getElementById('b-subject-custom').style.display = 'block';
+  }
+  builderQs = JSON.parse(JSON.stringify(q.questions || []));
+  renderBank();
+  nav('builder');
+  // Show edit mode banner
+  var banner = document.getElementById('editModeBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'editModeBanner';
+    banner.style.cssText = 'background:var(--amber-pale);border:1px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--amber);display:flex;justify-content:space-between;align-items:center';
+    var builderCard = document.querySelector('#page-builder .card');
+    if (builderCard) builderCard.parentNode.insertBefore(banner, builderCard);
+  }
+  banner.innerHTML = '✎ Editing: <strong>' + q.title + '</strong>'
+    + '<button class="btn btn-sm" style="margin-left:12px" onclick="cancelEditQuiz()">Cancel edit</button>';
+}
+
+function cancelEditQuiz() {
+  editingQuizId = null;
+  builderQs = [];
+  renderBank();
+  document.getElementById('b-title').value = '';
+  document.getElementById('b-class').value = '';
+  var banner = document.getElementById('editModeBanner');
+  if (banner) banner.remove();
 }
 
 function refreshAllSelects() {
@@ -1452,6 +1537,8 @@ function renderQuizTable() {
         <div style="display:flex;gap:4px">
           ${q.status==='draft'?`<button class="btn btn-sm btn-primary" onclick="publishQuiz('${q.id}')">Publish</button>`:''}
           ${q.status==='live'?`<button class="btn btn-sm" onclick="closeQuiz('${q.id}')">Close</button>`:''} ${q.status==='live'?`<button class="btn btn-sm btn-primary" onclick="copyQuizLink('${q.id}')">&#128279; Copy link</button>`:''}
+          <button class="btn btn-sm" onclick="editQuiz('${q.id}')">Edit</button>
+          <button class="btn btn-sm" onclick="duplicateQuiz('${q.id}')">Duplicate</button>
           <button class="btn btn-sm" onclick="nav('analytics');document.getElementById('analyticsQuizSelect').value='${q.id}';loadAnalytics()">Analytics</button>
           <button class="btn btn-sm btn-red" onclick="deleteQuiz('${q.id}')">Delete</button>
         </div>
