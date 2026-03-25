@@ -2752,6 +2752,34 @@ function openEditModal(qid) {
       + '<div class="form-group"><label class="lbl">Scale min label</label><input type="text" id="eq-scalemin" value="' + (q.scaleMin||'Strongly disagree') + '" /></div>'
       + '<div class="form-group"><label class="lbl">Scale max label</label><input type="text" id="eq-scalemax" value="' + (q.scaleMax||'Strongly agree') + '" /></div>'
       + '</div>';
+  } else if (q.type === 'grid') {
+    body += '<div class="form-group"><label class="lbl">Term–definition pairs (one per line: term | definition)</label>'
+      + '<textarea id="eq-pairs" rows="5" style="width:100%;font-family:monospace;font-size:12px">'
+      + (q.pairs||[]).map(function(p){ return p.term + ' | ' + p.def; }).join('\n')
+      + '</textarea></div>';
+  } else if (q.type === 'gridradio' || q.type === 'gridcheck') {
+    var isRadio = q.type === 'gridradio';
+    body += '<div class="form-group"><label class="lbl">Rows — one per line</label>'
+      + '<textarea id="eq-rows" rows="4" style="width:100%">' + (q.rows||[]).join('\n') + '</textarea></div>'
+      + '<div class="form-group"><label class="lbl">Columns — one per line</label>'
+      + '<textarea id="eq-cols" rows="3" style="width:100%">' + (q.cols||[]).join('\n') + '</textarea></div>';
+    body += '<div class="form-group"><label class="lbl">Correct answers per row</label><div style="font-size:12px">';
+    (q.rows||[]).forEach(function(row, ri) {
+      body += '<div style="margin-bottom:8px"><strong>' + row + ':</strong> ';
+      (q.cols||[]).forEach(function(col, ci) {
+        var checked = isRadio
+          ? (q.correct && Number(q.correct[ri]) === ci)
+          : (q.correct && (q.correct[ri]||[]).includes(ci));
+        body += '<label style="margin-right:10px;font-weight:normal">'
+          + '<input type="' + (isRadio?'radio':'checkbox') + '" '
+          + 'name="eq-gcor-' + ri + '" '
+          + 'id="eq-gcor-' + ri + '-' + ci + '" '
+          + 'value="' + ci + '" '
+          + (checked ? 'checked ' : '') + '/> ' + col + '</label>';
+      });
+      body += '</div>';
+    });
+    body += '</div></div>';
   }
 
   // Image section
@@ -2800,6 +2828,26 @@ function saveEditModal() {
   } else if (q.type === 'survey') {
     q.scaleMin = document.getElementById('eq-scalemin').value.trim();
     q.scaleMax = document.getElementById('eq-scalemax').value.trim();
+  } else if (q.type === 'grid') {
+    q.pairs = (document.getElementById('eq-pairs').value||'').split('\n')
+      .map(function(line){ var parts=line.split('|'); return parts.length>=2?{term:parts[0].trim(),def:parts[1].trim()}:null; })
+      .filter(function(p){ return p&&p.term&&p.def; });
+  } else if (q.type === 'gridradio' || q.type === 'gridcheck') {
+    q.rows = (document.getElementById('eq-rows').value||'').split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    q.cols = (document.getElementById('eq-cols').value||'').split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    var isRadio = q.type === 'gridradio';
+    q.correct = {};
+    q.rows.forEach(function(_, ri) {
+      if (isRadio) {
+        var sel = document.querySelector('input[name="eq-gcor-' + ri + '"]:checked');
+        q.correct[ri] = sel ? parseInt(sel.value) : 0;
+      } else {
+        q.correct[ri] = q.cols.map(function(_, ci) {
+          var el = document.getElementById('eq-gcor-' + ri + '-' + ci);
+          return el && el.checked ? ci : -1;
+        }).filter(function(v){ return v >= 0; });
+      }
+    });
   }
   q._svg = null; // clear cached SVG so it regenerates on next publish
   closeEditModal();
