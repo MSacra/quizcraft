@@ -2285,16 +2285,36 @@ async function submitStudentQuiz() {
   persistQuizzes();
   fetch('/api/quiz-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quizId:activeQuiz.id,submission:sub})}).catch(e=>console.warn('save failed',e));
 
+  var attemptNum = (activeQuiz._attempts || 0) + 1;
+  activeQuiz._attempts = attemptNum;
+
   var banner = document.createElement('div');
   banner.style.cssText = 'background:var(--ink);color:#fff;padding:28px;text-align:center;border-radius:var(--r2);margin-bottom:24px';
   banner.innerHTML =
-    '<div style="font-family:DM Serif Display,serif;font-size:13px;letter-spacing:1px;opacity:0.6;margin-bottom:8px">RESULT    '+studentName+'</div>'
+    '<div style="font-family:DM Serif Display,serif;font-size:13px;letter-spacing:1px;opacity:0.6;margin-bottom:8px">RESULT    '+studentName+(attemptNum>1?' (Attempt '+attemptNum+')':'')+'</div>'
     +'<div class="'+gc+'" style="font-family:DM Serif Display,serif;font-size:60px;line-height:1">'+grade+'</div>'
     +'<div style="font-size:22px;margin-top:8px;opacity:0.8">'+pct+'%</div>'
     +'<div style="font-size:13px;opacity:0.5;margin-top:4px">'+Math.round(earned)+' / '+possible+' marks</div>'
-    +'<button class="btn btn-sm" style="margin-top:16px;background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2)" onclick="document.getElementById(\'quizOverlay\').classList.remove(\'open\')">Close</button>';
+    +'<div style="display:flex;gap:10px;justify-content:center;margin-top:16px">'
+    +'<button class="btn btn-sm" style="background:var(--accent);color:#fff;border-color:var(--accent2)" onclick="retakeQuiz()">Retake quiz</button>'
+    +'<button class="btn btn-sm" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2)" onclick="document.getElementById(\'quizOverlay\').classList.remove(\'open\')">Close</button>'
+    +'</div>';
   document.getElementById('quizPlayerBody').prepend(banner);
   document.getElementById('quizPlayerBody').scrollIntoView();
+}
+
+function retakeQuiz() {
+  if (!activeQuiz) return;
+  studentAnswers = {};
+  aiMarkingStore = {};
+  document.getElementById('quizPlayerBody').innerHTML =
+    '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)">'
+    +'<div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading quiz...</div>'
+    +'<div style="font-size:13px;opacity:0.6">Just a moment, '+studentName+'</div></div>';
+  setTimeout(function() {
+    renderStudentQuiz();
+    document.getElementById('quizSubmitRow').style.display = 'block';
+  }, 50);
 }
 
 async function markOE(q) {
