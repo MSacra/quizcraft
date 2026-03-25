@@ -1439,21 +1439,76 @@ function renderQuizTable() {
     </tr>`).join('');
 }
 
-function publishQuiz(id) {
+async function publishQuiz(id) {
   const q = quizzes.find(q=>q.id===id);
-  if (q) {
+  if (!q) return;
+
+  // Show progress overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'publishOverlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,24,20,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:var(--paper);border-radius:var(--r2);padding:32px 40px;max-width:400px;width:90%;text-align:center;box-shadow:var(--shadow)">'
+    + '<div style="font-family:DM Serif Display,serif;font-size:18px;margin-bottom:8px">Publishing quiz...</div>'
+    + '<div id="publishStatus" style="font-size:13px;color:var(--ink3);margin-bottom:16px">Generating illustrations for students...</div>'
+    + '<div style="background:var(--paper3);border-radius:99px;height:4px;overflow:hidden">'
+    + '<div id="publishBar" style="height:100%;background:var(--accent);border-radius:99px;width:0%;transition:width 0.3s"></div>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+
+  const statusEl = document.getElementById('publishStatus');
+  const barEl = document.getElementById('publishBar');
+
+  try {
+    // Pre-generate all SVGs before publishing
+    for (var i = 0; i < q.questions.length; i++) {
+      const qi = q.questions[i];
+      barEl.style.width = Math.round((i / q.questions.length) * 80) + '%';
+      if (qi._svg) continue;
+      if (qi.customImage) {
+        qi._svg = '<svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"><image href="' + qi.customImage + '" x="0" y="0" width="760" height="160" preserveAspectRatio="xMidYMid meet"/></svg>';
+        continue;
+      }
+      statusEl.textContent = 'Generating illustration ' + (i+1) + ' of ' + q.questions.length + '...';
+      const prompt = 'Create an educational SVG illustration that contextualises the subject area for a '
+        + q.ks + ' ' + q.subject + ' question. '
+        + 'Topic: ' + (qi.topic || q.subject) + '. '
+        + 'Illustrate the setting or domain only — never reveal or hint at the answer. '
+        + 'Output ONLY the raw SVG element, nothing else. '
+        + 'Opening tag exactly: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> '
+        + 'First child: <rect width="760" height="160" fill="#faf9f6"/> '
+        + 'Muted palette, text labels in #555, font-family="sans-serif" size 12-13px. '
+        + '3-5 elements. No <image>, no <foreignObject>.';
+      try {
+        const raw = await callClaude(prompt, 1800);
+        const m = raw.match(/<svg[\s\S]+?<\/svg>/i);
+        qi._svg = m ? m[0] : null;
+      } catch(e) { qi._svg = null; }
+    }
+
+    barEl.style.width = '90%';
+    statusEl.textContent = 'Saving to server...';
+
     q.status = 'live';
     q.submissions = simulateSubmissions(q.questions, 'live');
-    // Save quiz definition to server so students can access it
-    fetch('/api/quiz-data', {
+
+    // Save to server with SVGs included
+    await fetch('/api/quiz-data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(q)
-    }).then(function(r){ return r.json(); })
-      .then(function(d){ if(d.ok) console.log('Quiz saved to server:', q.id); })
-      .catch(function(e){ console.warn('Could not save quiz to server:', e); });
+    });
+
+    barEl.style.width = '100%';
+    statusEl.textContent = 'Published successfully!';
+    persistQuizzes();
+    renderQuizTable(); updateOverview(); refreshAllSelects();
+
+    setTimeout(function(){ document.body.removeChild(overlay); }, 1000);
+
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    setTimeout(function(){ document.body.removeChild(overlay); }, 3000);
   }
-  renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes();
 }
 function closeQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q) q.status='closed'; renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
 function deleteQuiz(id) { if(confirm('Delete this quiz?')){ quizzes=quizzes.filter(q=>q.id!==id); renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); } }
