@@ -624,6 +624,10 @@ textarea { resize: vertical; line-height: 1.6; }
                 <label class="lbl">Class / group name</label>
                 <input type="text" id="b-class" placeholder="e.g. 10B, Set 2" />
               </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">AI generation settings</div>
               <div class="grid2">
                 <div class="form-group">
                   <label class="lbl">Difficulty</label>
@@ -648,8 +652,8 @@ textarea { resize: vertical; line-height: 1.6; }
                 </div>
               </div>
               <div class="form-group">
-                <label class="lbl">AI criteria &amp; focus (optional)</label>
-                <textarea id="b-criteria" rows="3" placeholder="e.g. Focus on past tense conjugation. Include at least 2 source-based questions. Use Cambridge A Level command words. Prioritise application over recall."></textarea>
+                <label class="lbl">Criteria &amp; focus for AI (optional)</label>
+                <textarea id="b-criteria" rows="3" placeholder="e.g. Focus on past tense conjugation only. Include source-based questions. Use Cambridge A Level command words. Prioritise application over recall."></textarea>
               </div>
             </div>
 
@@ -1246,7 +1250,9 @@ function buildTypeSpec(type, marks, ks) {
     gridradio: 'Grid MCQ: {"text":"For each item, select the correct category","rows":["Item A","Item B","Item C"],"cols":["Cat 1","Cat 2","Cat 3","Cat 4"],"correct":{"0":1,"1":2,"2":0}}\n'
       + 'Rules: one correct column per row, columns are mutually exclusive categories.',
     gridcheck: 'Grid checkbox: {"text":"Tick all characteristics that apply to each item","rows":["Item A","Item B"],"cols":["Feature 1","Feature 2","Feature 3","Feature 4"],"correct":{"0":[0,2],"1":[1,3]}}\n'
-      + 'Rules: multiple correct columns per row allowed, features must be clearly applicable or not.'
+      + 'Rules: multiple correct columns per row allowed. IMPORTANT: rows and cols must contain real subject-specific content.',
+    gridradio: 'Grid MCQ: {"text":"For each item, select the correct category","rows":["Real row A","Real row B","Real row C"],"cols":["Real col 1","Real col 2","Real col 3","Real col 4"],"correct":{"0":1,"1":2,"2":0}}\\n'
+      + 'Rules: one correct column per row, columns are mutually exclusive. IMPORTANT: rows and cols must contain real subject-specific content — never generic placeholder text.'
   };
   return specs[type] || specs.mcq;
 }
@@ -1296,7 +1302,7 @@ async function genAllAI() {
     + '\n- Difficulty: ' + diffGuide
     + (ctx.command ? '\n- Command word style: ' + ctx.command : '')
     + (ctx.criteria ? '\n- Additional criteria: ' + ctx.criteria : '')
-    + '\n\nMix question types across: mcq, multiselect, gapfill, openended, grid.'
+    + '\n\nMix question types across: mcq, multiselect, gapfill, openended, grid, gridradio, gridcheck.'
     + '\nFor openended questions, write a detailed mark scheme with discrete 1-mark points.'
     + '\nFor MCQ, use one clearly correct answer with three plausible distractors.'
     + '\nFor multiselect, state the number of correct answers in the question stem.'
@@ -1307,7 +1313,9 @@ async function genAllAI() {
     + '{"type":"openended","text":"…","markScheme":"1 mark: …\n2 marks: …\nMax 4 marks: …","marks":4,"topic":"' + (ctx.topic||ctx.subject) + '"},'
     + '{"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"' + (ctx.topic||ctx.subject) + '"},'
     + '{"type":"multiselect","text":"Which TWO of the following…","options":["A","B","C","D"],"correct":[0,2],"marks":2,"topic":"' + (ctx.topic||ctx.subject) + '"},'
-    + '{"type":"grid","text":"Match each term…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"},{"term":"…","def":"…"}],"marks":3,"topic":"' + (ctx.topic||ctx.subject) + '"}]'
+    + '{"type":"grid","text":"Match each term…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"},{"term":"…","def":"…"}],"marks":3,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"gridradio","text":"For each item select the correct category","rows":["…","…","…"],"cols":["…","…","…","…"],"correct":{"0":0,"1":2,"2":1},"marks":3,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"gridcheck","text":"Tick all features that apply to each item","rows":["…","…"],"cols":["…","…","…","…"],"correct":{"0":[0,2],"1":[1,3]},"marks":4,"topic":"' + (ctx.topic||ctx.subject) + '"}]'
     + '\nGenerate exactly ' + n + ' questions total.';
 
   try {
