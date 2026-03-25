@@ -1439,7 +1439,22 @@ function renderQuizTable() {
     </tr>`).join('');
 }
 
-function publishQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q){q.status='live';q.submissions=simulateSubmissions(q.questions,'live');} renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
+function publishQuiz(id) {
+  const q = quizzes.find(q=>q.id===id);
+  if (q) {
+    q.status = 'live';
+    q.submissions = simulateSubmissions(q.questions, 'live');
+    // Save quiz definition to server so students can access it
+    fetch('/api/quiz-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(q)
+    }).then(function(r){ return r.json(); })
+      .then(function(d){ if(d.ok) console.log('Quiz saved to server:', q.id); })
+      .catch(function(e){ console.warn('Could not save quiz to server:', e); });
+  }
+  renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes();
+}
 function closeQuiz(id) { const q=quizzes.find(q=>q.id===id); if(q) q.status='closed'; renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); }
 function deleteQuiz(id) { if(confirm('Delete this quiz?')){ quizzes=quizzes.filter(q=>q.id!==id); renderQuizTable(); updateOverview(); refreshAllSelects(); persistQuizzes(); } }
 
@@ -2383,21 +2398,50 @@ function checkQuizURLParam() {
   var params = new URLSearchParams(window.location.search);
   var quizId = params.get('quiz');
   if (!quizId) { document.documentElement.style.visibility = ''; return; }
-  var q = quizzes.find(function(x){ return x.id === quizId; });
-  if (!q || q.status !== 'live') {
+
+  // Try local first, then fetch from server
+  var localQ = quizzes.find(function(x){ return x.id === quizId && x.status === 'live'; });
+  if (localQ) {
+    launchStudentView(localQ);
+  } else {
+    // Student device — fetch quiz from server
     document.documentElement.style.visibility = '';
-    document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Quiz not available</h2><p style="color:#8a8480">This quiz is not currently active. Please ask your teacher for an updated link.</p></div>';
-    return;
+    document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center">'
+      + '<div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading quiz...</div>'
+      + '<div style="font-size:13px;color:#8a8480">Please wait</div></div>';
+    fetch('/api/quiz-data?id=' + encodeURIComponent(quizId))
+      .then(function(r) { return r.json(); })
+      .then(function(q) {
+        if (!q || q.error || q.status !== 'live') {
+          document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center">'
+            + '<h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Quiz not available</h2>'
+            + '<p style="color:#8a8480">This quiz is not currently active. Please ask your teacher for an updated link.</p></div>';
+          return;
+        }
+        launchStudentView(q);
+      })
+      .catch(function(e) {
+        document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center">'
+          + '<h2 style="font-family:DM Serif Display,serif;margin-bottom:12px">Could not load quiz</h2>'
+          + '<p style="color:#8a8480">Please check your internet connection and try again.</p></div>';
+      });
   }
+}
+
+function launchStudentView(q) {
   document.documentElement.style.visibility = '';
   var name = prompt('Please enter your full name to begin:');
   if (!name || !name.trim()) { window.location.href = window.location.pathname; return; }
   studentName = name.trim();
   studentAnswers = {}; aiMarkingStore = {};
   activeQuiz = q;
-  document.querySelector('.shell').style.display = 'none';
+  // Hide teacher shell if present
+  var shell = document.querySelector('.shell');
+  if (shell) shell.style.display = 'none';
   document.getElementById('quizOverlay').classList.add('open');
-  document.getElementById('quizPlayerBody').innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)"><div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading your quiz...</div><div style="font-size:13px;opacity:0.6">Just a moment, ' + name.trim() + '</div></div>';
+  document.getElementById('quizPlayerBody').innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)">'
+    + '<div style="font-family:DM Serif Display,serif;font-size:22px;margin-bottom:12px">Loading your quiz...</div>'
+    + '<div style="font-size:13px;opacity:0.6">Just a moment, ' + name.trim() + '</div></div>';
   setTimeout(function() {
     renderStudentQuiz();
     document.getElementById('quizSubmitRow').style.display = 'block';
