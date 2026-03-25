@@ -1480,8 +1480,10 @@ async function publishQuiz(id) {
         + '3-5 elements. No <image>, no <foreignObject>.';
       try {
         const raw = await callClaude(prompt, 1800);
-        const m = raw.match(/<svg[\s\S]+?<\/svg>/i);
-        qi._svg = m ? m[0] : null;
+        const m = raw.match(/<svg[\s\S]+<\/svg>/i);
+        if (m) { qi._svg = m[0]; }
+        else if (raw.trim().startsWith('<svg')) { qi._svg = raw.trim(); }
+        else { qi._svg = null; }
       } catch(e) { qi._svg = null; }
     }
 
@@ -2084,12 +2086,11 @@ async function renderStudentQuiz() {
     try {
       const svg = await fetchSVGGraphic(qu);
       if (svg) {
-        qu._svg = svg; // cache for future use
+        qu._svg = svg;
         wrap.innerHTML = svg;
         wrap.style.minHeight = '0';
       } else {
-        wrap.innerHTML = `<div style="padding:1rem;font-size:12px;color:var(--ink3);font-style:italic;text-align:center">Illustration unavailable</div>`;
-        wrap.style.minHeight = '0';
+        wrap.style.display = 'none'; // hide gracefully if no illustration
       }
     } catch(e) {
       wrap.style.display = 'none';
