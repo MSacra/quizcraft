@@ -689,7 +689,7 @@ textarea { resize: vertical; line-height: 1.6; }
 
             <div class="card" style="margin-bottom:16px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <div class="card-title" style="margin-bottom:0">Question bank (<span id="qBankCount">0</span>)</div>
+                <div class="card-title" style="margin-bottom:0">Question bank (<span id="qBankCount">0</span> Qs · <span id="qMarksCount">0</span> marks)</div>
                 <button class="btn btn-sm" onclick="genAllAI()" id="btnGenAll">AI generate all ↗</button>
               </div>
               <div id="questionBank"><div class="empty">No questions yet.</div></div>
@@ -837,6 +837,21 @@ textarea { resize: vertical; line-height: 1.6; }
 
     </div><!-- /content -->
   </div><!-- /main -->
+
+<!-- ── EDIT QUESTION MODAL ── -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,24,20,0.6);z-index:9998;overflow-y:auto;">
+  <div style="background:var(--paper);border-radius:var(--r2);max-width:560px;margin:40px auto;padding:28px;box-shadow:var(--shadow)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:0">Edit question</div>
+      <button onclick="closeEditModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3)">×</button>
+    </div>
+    <div id="editModalBody"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)">
+      <button class="btn btn-primary" onclick="saveEditModal()">Save changes</button>
+      <button class="btn" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 </div><!-- /shell -->
 
 <!-- ── QUIZ PLAYER OVERLAY ── -->
@@ -1064,13 +1079,18 @@ function addQuestion() {
 }
 
 function renderBank() {
+  const totalMarks = builderQs.reduce(function(sum, q){ return sum + (q.marks||0); }, 0);
   document.getElementById('qBankCount').textContent = builderQs.length;
+  document.getElementById('qMarksCount').textContent = totalMarks;
   const el = document.getElementById('questionBank');
   if (!builderQs.length) { el.innerHTML='<div class="empty">No questions yet.</div>'; return; }
   const types = {mcq:'MCQ',multiselect:'Multi-select',gapfill:'Gap fill',openended:'Open-ended',survey:'Survey',grid:'Grid',gridradio:'Grid MCQ',gridcheck:'Grid checkbox'};
   el.innerHTML = builderQs.map((q,i) => `
     <div class="q-card">
-      <button class="q-del" onclick="delQ(${q.id})">×</button>
+      <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">
+        <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="openEditModal(${q.id})">Edit</button>
+        <button class="q-del" onclick="delQ(${q.id})">×</button>
+      </div>
       <div class="q-card-meta">
         <span class="badge badge-gray">${types[q.type]}</span>
         <span class="badge badge-green">${q.marks}m</span>
@@ -1086,7 +1106,7 @@ function renderBank() {
           : `<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3);padding:4px 10px;border:1px dashed var(--rule);border-radius:var(--r);transition:all .15s" onmouseover="this.style.borderColor='var(--ink3)'" onmouseout="this.style.borderColor='var(--rule)'">
                Upload graphic <input type="file" accept="image/*" style="display:none" onchange="uploadCustomImage(${q.id},this)" />
              </label>
-             <span style="font-size:11px;color:var(--ink3)">or AI will generate one</span>`
+             <span style="font-size:11px;color:var(--ink3)">or AI will generate one on publish</span>`
         }
       </div>
     </div>`).join('');
@@ -2690,6 +2710,143 @@ async function genFromFile() {
   btn.disabled = false;
   btn.innerHTML = 'Generate from content ↗';
 }
+
+
+// ═══════════════════════════════════════════════
+// EDIT QUESTION MODAL
+// ═══════════════════════════════════════════════
+var editingQId = null;
+
+function openEditModal(qid) {
+  editingQId = qid;
+  const q = builderQs.find(function(x){ return x.id === qid; });
+  if (!q) return;
+  const types = {mcq:'MCQ',multiselect:'Multi-select',gapfill:'Gap fill',openended:'Open-ended',survey:'Survey',grid:'Grid',gridradio:'Grid MCQ',gridcheck:'Grid checkbox'};
+  let body = '<div class="form-group"><label class="lbl">Question text</label>'
+    + '<textarea id="eq-text" rows="3" style="width:100%">' + (q.text||'') + '</textarea></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    + '<div class="form-group"><label class="lbl">Marks</label><input type="number" id="eq-marks" value="' + (q.marks||1) + '" min="1" max="25" /></div>'
+    + '<div class="form-group"><label class="lbl">Topic / strand</label><input type="text" id="eq-topic" value="' + (q.topic||'') + '" /></div>'
+    + '</div>';
+
+  if (q.type === 'mcq' || q.type === 'multiselect') {
+    body += '<div class="form-group"><label class="lbl">Options</label>';
+    (q.options||[]).forEach(function(opt, i) {
+      body += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+        + '<span style="font-size:12px;font-weight:500;width:16px">' + ['A','B','C','D'][i] + '</span>'
+        + '<input type="text" id="eq-opt-' + i + '" value="' + opt + '" style="flex:1" />'
+        + (q.type==='mcq'
+          ? '<input type="radio" name="eq-correct" value="' + i + '"' + (q.correct===i?' checked':'') + ' title="Correct answer" />'
+          : '<input type="checkbox" value="' + i + '"' + ((q.correct||[]).includes(i)?' checked':'') + ' id="eq-ms-' + i + '" title="Correct answer" />')
+        + '</div>';
+    });
+    body += '</div>';
+  } else if (q.type === 'gapfill') {
+    body += '<div class="form-group"><label class="lbl">Correct answers (comma separated)</label>'
+      + '<input type="text" id="eq-answers" value="' + (q.answers||[]).join(', ') + '" /></div>';
+  } else if (q.type === 'openended') {
+    body += '<div class="form-group"><label class="lbl">Mark scheme</label>'
+      + '<textarea id="eq-markscheme" rows="3" style="width:100%">' + (q.markScheme||'') + '</textarea></div>';
+  } else if (q.type === 'survey') {
+    body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+      + '<div class="form-group"><label class="lbl">Scale min label</label><input type="text" id="eq-scalemin" value="' + (q.scaleMin||'Strongly disagree') + '" /></div>'
+      + '<div class="form-group"><label class="lbl">Scale max label</label><input type="text" id="eq-scalemax" value="' + (q.scaleMax||'Strongly agree') + '" /></div>'
+      + '</div>';
+  }
+
+  // Image section
+  body += '<div class="form-group" style="margin-top:8px"><label class="lbl">Illustration</label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+  if (q.customImage) {
+    body += '<img src="' + q.customImage + '" style="height:48px;border-radius:4px;border:1px solid var(--rule)" />'
+      + '<button class="btn btn-sm btn-red" onclick="editRemoveImage()">Remove</button>';
+  } else if (q._svg) {
+    body += '<span style="font-size:12px;color:var(--accent)">✓ AI illustration cached</span>'
+      + '<button class="btn btn-sm" onclick="editRegenImage()">Regenerate</button>';
+  } else {
+    body += '<span style="font-size:12px;color:var(--ink3)">No illustration yet</span>'
+      + '<button class="btn btn-sm" onclick="editGenImage()">AI generate</button>';
+  }
+  body += '<label class="btn btn-sm" style="cursor:pointer">Upload image'
+    + '<input type="file" accept="image/*" style="display:none" onchange="editUploadImage(this)" /></label>'
+    + '</div></div>';
+
+  document.getElementById('editModalBody').innerHTML = body;
+  document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  editingQId = null;
+}
+
+function saveEditModal() {
+  const q = builderQs.find(function(x){ return x.id === editingQId; });
+  if (!q) return;
+  q.text = document.getElementById('eq-text').value.trim();
+  q.marks = parseInt(document.getElementById('eq-marks').value) || 1;
+  q.topic = document.getElementById('eq-topic').value.trim();
+  if (q.type === 'mcq') {
+    q.options = [0,1,2,3].map(function(i){ return (document.getElementById('eq-opt-'+i)||{value:''}).value; }).filter(Boolean);
+    const checked = document.querySelector('input[name="eq-correct"]:checked');
+    q.correct = checked ? parseInt(checked.value) : 0;
+  } else if (q.type === 'multiselect') {
+    q.options = [0,1,2,3].map(function(i){ return (document.getElementById('eq-opt-'+i)||{value:''}).value; }).filter(Boolean);
+    q.correct = [0,1,2,3].filter(function(i){ const el=document.getElementById('eq-ms-'+i); return el&&el.checked; });
+  } else if (q.type === 'gapfill') {
+    q.answers = (document.getElementById('eq-answers').value||'').split(',').map(function(s){ return s.trim().toLowerCase(); }).filter(Boolean);
+  } else if (q.type === 'openended') {
+    q.markScheme = document.getElementById('eq-markscheme').value.trim();
+  } else if (q.type === 'survey') {
+    q.scaleMin = document.getElementById('eq-scalemin').value.trim();
+    q.scaleMax = document.getElementById('eq-scalemax').value.trim();
+  }
+  q._svg = null; // clear cached SVG so it regenerates on next publish
+  closeEditModal();
+  renderBank();
+}
+
+function editUploadImage(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const q = builderQs.find(function(x){ return x.id === editingQId; });
+    if (q) { q.customImage = e.target.result; q._svg = null; }
+    closeEditModal(); openEditModal(editingQId);
+  };
+  reader.readAsDataURL(file);
+}
+
+function editRemoveImage() {
+  const q = builderQs.find(function(x){ return x.id === editingQId; });
+  if (q) { delete q.customImage; q._svg = null; }
+  closeEditModal(); openEditModal(editingQId);
+}
+
+async function editGenImage() {
+  const q = builderQs.find(function(x){ return x.id === editingQId; });
+  if (!q) return;
+  const btn = document.querySelector('#editModalBody button[onclick="editGenImage()"]')
+    || document.querySelector('#editModalBody button[onclick="editRegenImage()"]');
+  if (btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Generating...'; }
+  const subject = getSubject();
+  const ks = document.getElementById('b-ks').value;
+  const prompt = 'Create an educational SVG illustration contextualising a '
+    + ks + ' ' + subject + ' question. Topic: ' + (q.topic||subject) + '. '
+    + 'Illustrate the setting or domain only — never reveal the answer. '
+    + 'Output ONLY the raw SVG. Opening tag exactly: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> '
+    + 'First child: <rect width="760" height="160" fill="#faf9f6"/> '
+    + 'Muted palette, text labels in #555, font-family="sans-serif" 12-13px. 3-5 elements. No <image> no <foreignObject>.';
+  try {
+    const raw = await callClaude(prompt, 1800);
+    const m = raw.match(/<svg[\s\S]+<\/svg>/i);
+    q._svg = m ? m[0] : (raw.trim().startsWith('<svg') ? raw.trim() : null);
+  } catch(e) { q._svg = null; }
+  closeEditModal(); openEditModal(editingQId);
+  renderBank();
+}
+
+function editRegenImage() { editGenImage(); }
 
 renderQForm();
 initApiKeyUI();
