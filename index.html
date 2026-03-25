@@ -2500,7 +2500,11 @@ function launchStudentView(q) {
   setTimeout(function() {
     renderStudentQuiz();
     document.getElementById('quizSubmitRow').style.display = 'block';
-    pregenerateSVGs(q, null).then(function(){ persistQuizzes(); });
+    // Only generate SVGs if not already present (server-published quizzes have them pre-built)
+    var hasSVGs = q.questions && q.questions.some(function(qi){ return qi._svg; });
+    if (!hasSVGs) {
+      pregenerateSVGs(q, null).then(function(){ persistQuizzes(); });
+    }
   }, 50);
 }
 
