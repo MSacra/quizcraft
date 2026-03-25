@@ -624,6 +624,33 @@ textarea { resize: vertical; line-height: 1.6; }
                 <label class="lbl">Class / group name</label>
                 <input type="text" id="b-class" placeholder="e.g. 10B, Set 2" />
               </div>
+              <div class="grid2">
+                <div class="form-group">
+                  <label class="lbl">Difficulty</label>
+                  <select id="b-difficulty">
+                    <option value="mixed">Mixed</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="stretch">Stretch &amp; challenge</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="lbl">Command word style</label>
+                  <select id="b-command">
+                    <option value="">Auto (match key stage)</option>
+                    <option value="describe">Describe / Identify</option>
+                    <option value="explain">Explain / Suggest</option>
+                    <option value="analyse">Analyse / Evaluate</option>
+                    <option value="discuss">Discuss / Assess</option>
+                    <option value="calculate">Calculate / Show</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="lbl">AI criteria &amp; focus (optional)</label>
+                <textarea id="b-criteria" rows="3" placeholder="e.g. Focus on past tense conjugation. Include at least 2 source-based questions. Use Cambridge A Level command words. Prioritise application over recall."></textarea>
+              </div>
             </div>
 
             <div class="card">
@@ -1191,56 +1218,103 @@ async function callClaude(prompt, maxTokens=800) {
   return (fi < 1e9 && li > fi) ? raw.slice(fi, li + 1) : raw;
 }
 
+function getAIContext() {
+  return {
+    subject: getSubject(),
+    ks: document.getElementById('b-ks').value,
+    topic: document.getElementById('b-qtopic').value || document.getElementById('b-topic').value || '',
+    difficulty: (document.getElementById('b-difficulty')||{value:'mixed'}).value || 'mixed',
+    command: (document.getElementById('b-command')||{value:''}).value || '',
+    criteria: (document.getElementById('b-criteria')||{value:''}).value.trim() || '',
+    marks: parseInt(document.getElementById('b-marks').value) || 1
+  };
+}
+
+function buildTypeSpec(type, marks, ks) {
+  const specs = {
+    mcq: 'MCQ: {"text":"Question stem using appropriate command word","options":["Option A","Option B","Option C","Option D"],"correct":0}\n'
+      + 'Rules: one clearly correct answer, three plausible distractors, no "all of the above", options similar in length.',
+    multiselect: 'Multi-select: {"text":"Which of the following… (Select all that apply)","options":["A","B","C","D"],"correct":[0,2]}\n'
+      + 'Rules: 2-3 correct answers, distractors must be plausible, state number of correct answers in stem.',
+    gapfill: 'Gap fill: {"text":"Sentence with ___ for each blank","answers":["word1","word2"]}\n'
+      + 'Rules: blanks replace key terms/values only, answers are single words or short phrases, case-insensitive matching.',
+    openended: 'Open-ended: {"text":"Question using ' + ks + ' command word","markScheme":"Award marks as follows:\n1 mark: …\n2 marks: …\nMax ' + marks + ' marks: …"}\n'
+      + 'Rules: mark scheme must list discrete marking points, each worth 1 mark, total = ' + marks + ' marks.',
+    survey: 'Survey/self-assessment: {"text":"How confident are you with…","scaleMin":"Not confident","scaleMax":"Very confident"}',
+    grid: 'Grid match: {"text":"Match each term to its correct definition","pairs":[{"term":"Term A","def":"Definition A"},{"term":"Term B","def":"Definition B"},{"term":"Term C","def":"Definition C"}]}\n'
+      + 'Rules: 3-5 pairs, definitions must be unambiguous, one correct match per term.',
+    gridradio: 'Grid MCQ: {"text":"For each item, select the correct category","rows":["Item A","Item B","Item C"],"cols":["Cat 1","Cat 2","Cat 3","Cat 4"],"correct":{"0":1,"1":2,"2":0}}\n'
+      + 'Rules: one correct column per row, columns are mutually exclusive categories.',
+    gridcheck: 'Grid checkbox: {"text":"Tick all characteristics that apply to each item","rows":["Item A","Item B"],"cols":["Feature 1","Feature 2","Feature 3","Feature 4"],"correct":{"0":[0,2],"1":[1,3]}}\n'
+      + 'Rules: multiple correct columns per row allowed, features must be clearly applicable or not.'
+  };
+  return specs[type] || specs.mcq;
+}
+
 async function genAIQuestion() {
   const btn = document.getElementById('btnGenQ');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Generating…';
-  const subject = getSubject();
-  const ks = document.getElementById('b-ks').value;
-  const topic = document.getElementById('b-qtopic').value||document.getElementById('b-topic').value||'';
-  const marks = parseInt(document.getElementById('b-marks').value)||1;
-  const types = {mcq:'MCQ',multiselect:'Multi-select',gapfill:'Gap fill',openended:'Open-ended',survey:'Survey',grid:'Grid/match',gridradio:'Grid MCQ',gridcheck:'Grid checkbox'};
-  const prompt = `Generate one ${types[currentQType]} question for ${ks} ${subject}${topic?' on '+topic:''}.
-Respond ONLY with JSON, no markdown.
-Structures:
-mcq: {"text":"…","options":["…","…","…","…"],"correct":0}
-multiselect: {"text":"…","options":["…","…","…","…"],"correct":[0,2]}
-gapfill: {"text":"sentence with ___","answers":["word1"]}
-openended: {"text":"…","markScheme":"key points for ${marks} marks"}
-survey: {"text":"…","scaleMin":"Strongly disagree","scaleMax":"Strongly agree"}
-grid: {"text":"Match each…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"},{"term":"…","def":"…"}]}`;
+  const ctx = getAIContext();
+  const typeSpec = buildTypeSpec(currentQType, ctx.marks, ctx.ks);
+  const diffGuide = {easy:'straightforward recall, simple language', medium:'some application required, clear context', hard:'analysis or evaluation required, complex scenario', stretch:'A-grade challenge, multi-step reasoning', mixed:'appropriate for the key stage'}[ctx.difficulty] || 'appropriate for the key stage';
+
+  const prompt = 'You are an experienced ' + ctx.ks + ' ' + ctx.subject + ' examiner writing assessment questions.'
+    + '\n\nGenerate ONE ' + currentQType.toUpperCase() + ' question with these specifications:'
+    + '\n- Subject: ' + ctx.subject
+    + '\n- Level: ' + ctx.ks
+    + (ctx.topic ? '\n- Topic/strand: ' + ctx.topic : '')
+    + '\n- Marks: ' + ctx.marks
+    + '\n- Difficulty: ' + diffGuide
+    + (ctx.command ? '\n- Command word style: ' + ctx.command : '')
+    + (ctx.criteria ? '\n- Additional criteria: ' + ctx.criteria : '')
+    + '\n\nQuestion type specification and JSON structure to follow EXACTLY:'
+    + '\n' + typeSpec
+    + '\n\nRespond ONLY with the JSON object. No markdown, no explanation, no preamble.';
+
   try {
-    const raw = await callClaude(prompt);
+    const raw = await callClaude(prompt, 800);
     const parsed = JSON.parse(raw);
-    if (!parsed.text) throw new Error();
-    builderQs.push({ id:Date.now(), type:currentQType, marks, topic, ks:document.getElementById('b-ks').value, ...parsed });
+    if (!parsed.text) throw new Error('No question text returned');
+    builderQs.push({ id:Date.now(), type:currentQType, marks:ctx.marks, topic:ctx.topic, ks:ctx.ks, ...parsed });
     renderBank();
-  } catch(e) { alert('AI generation failed. Try again.'); }
+  } catch(e) { alert('AI generation failed: ' + e.message + '. Try again.'); }
   btn.disabled=false; btn.innerHTML='Generate with AI ↗';
 }
 
 async function genAllAI() {
   const n = parseInt(document.getElementById('b-qcount').value)||5;
-  const subject = getSubject();
-  const ks = document.getElementById('b-ks').value;
-  const topic = document.getElementById('b-topic').value||'';
   const btn = document.getElementById('btnGenAll');
-  btn.disabled=true; btn.innerHTML=`<span class="spinner"></span>Generating ${n} questions…`;
-  const prompt = `Generate exactly ${n} varied quiz questions for ${ks} ${subject}${topic?' on topic: '+topic:''}.
-Mix question types. Respond ONLY with a JSON array, no markdown:
-[
-  {"type":"mcq","text":"…","options":["…","…","…","…"],"correct":0,"marks":1,"topic":"${topic||subject}"},
-  {"type":"openended","text":"…","markScheme":"key points for 4 marks","marks":4,"topic":"${topic||subject}"},
-  {"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"${topic||subject}"},
-  {"type":"multiselect","text":"…","options":["…","…","…","…"],"correct":[0,2],"marks":2,"topic":"${topic||subject}"},
-  {"type":"grid","text":"Match each…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"}],"marks":2,"topic":"${topic||subject}"},
-  {"type":"gridradio","text":"Rate each topic…","rows":["Topic A","Topic B","Topic C"],"cols":["1","2","3","4","5"],"correct":{"0":2,"1":3,"2":4},"marks":3,"topic":"${topic||subject}"},
-  {"type":"gridcheck","text":"Tick all that apply for each…","rows":["Plant cell","Animal cell"],"cols":["Nucleus","Cell wall","Chloroplast","Mitochondria"],"correct":{"0":[0,1,2,3],"1":[0,3]},"marks":4,"topic":"${topic||subject}"}
-]
-Generate ${n} questions total with varied types and difficulty.`;
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Generating ' + n + ' questions…';
+  const ctx = getAIContext();
+  const diffGuide = {easy:'straightforward recall, simple language', medium:'some application required', hard:'analysis or evaluation required', stretch:'A-grade stretch, multi-step reasoning', mixed:'mix of recall, application and analysis appropriate for ' + ctx.ks}[ctx.difficulty] || 'mixed difficulty';
+
+  const prompt = 'You are an experienced ' + ctx.ks + ' ' + ctx.subject + ' examiner.'
+    + '\n\nGenerate exactly ' + n + ' quiz questions with these specifications:'
+    + '\n- Subject: ' + ctx.subject
+    + '\n- Level: ' + ctx.ks
+    + (ctx.topic ? '\n- Topic/strand: ' + ctx.topic : '')
+    + '\n- Difficulty: ' + diffGuide
+    + (ctx.command ? '\n- Command word style: ' + ctx.command : '')
+    + (ctx.criteria ? '\n- Additional criteria: ' + ctx.criteria : '')
+    + '\n\nMix question types across: mcq, multiselect, gapfill, openended, grid.'
+    + '\nFor openended questions, write a detailed mark scheme with discrete 1-mark points.'
+    + '\nFor MCQ, use one clearly correct answer with three plausible distractors.'
+    + '\nFor multiselect, state the number of correct answers in the question stem.'
+    + '\nFor gapfill, blanks replace key terms only.'
+    + '\nFor grid, include 3-4 term-definition pairs.'
+    + '\n\nRespond ONLY with a JSON array. No markdown, no explanation:'
+    + '\n[{"type":"mcq","text":"…","options":["A","B","C","D"],"correct":0,"marks":1,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"openended","text":"…","markScheme":"1 mark: …\n2 marks: …\nMax 4 marks: …","marks":4,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"gapfill","text":"sentence with ___","answers":["word"],"marks":1,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"multiselect","text":"Which TWO of the following…","options":["A","B","C","D"],"correct":[0,2],"marks":2,"topic":"' + (ctx.topic||ctx.subject) + '"},'
+    + '{"type":"grid","text":"Match each term…","pairs":[{"term":"…","def":"…"},{"term":"…","def":"…"},{"term":"…","def":"…"}],"marks":3,"topic":"' + (ctx.topic||ctx.subject) + '"}]'
+    + '\nGenerate exactly ' + n + ' questions total.';
+
   try {
-    const raw = await callClaude(prompt, 2000);
+    const raw = await callClaude(prompt, 2500);
     const arr = JSON.parse(raw);
-    arr.forEach((q,i) => { if(q.text) builderQs.push({id:Date.now()+i,ks,...q}); });
+    const ks = ctx.ks;
+    arr.forEach(function(q,i){ if(q.text) builderQs.push({id:Date.now()+i, ks:ks, ...q}); });
     renderBank();
   } catch(e) { alert('Bulk generation failed. Try again.'); }
   btn.disabled=false; btn.innerHTML='AI generate all ↗';
