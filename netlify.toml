@@ -1,17 +1,29 @@
 [build]
-[[redirects]]
-  from = "/api/anthropic"
-  to = "/.netlify/functions/anthropic-proxy"
-  status = 200
-[[redirects]]
-  from = "/api/claude"
-  to = "/.netlify/functions/anthropic-proxy"
-  status = 200
-[[redirects]]
-  from = "/api/quiz-submit"
-  to = "/.netlify/functions/quiz-submit"
-  status = 200
-[[redirects]]
-  from = "/api/quiz-results"
-  to = "/.netlify/functions/quiz-results"
-  status = 200
+
+[[edge_functions]]
+  path = "/api/claude"
+  function = "claude"
+
+[[edge_functions]]
+  path = "/api/quiz-data"
+  function = "quiz-data"
+
+[[edge_functions]]
+  path = "/api/quiz-submit"
+  function = "quiz-submit"
+
+[[edge_functions]]
+  path = "/api/quiz-results"
+  function = "quiz-results"
+
+[[edge_functions]]
+  path = "/api/auth/google"
+  function = "auth-google"
+
+[[edge_functions]]
+  path = "/api/auth/callback"
+  function = "auth-callback"
+
+[[edge_functions]]
+  path = "/api/classroom-post"
+  function = "classroom-post"
