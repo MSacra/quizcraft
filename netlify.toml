@@ -20,3 +20,23 @@
   from = "/api/quiz-results"
   to = "/.netlify/functions/quiz-results"
   status = 200
+
+[[redirects]]
+  from = "/api/quiz-data"
+  to = "/.netlify/functions/quiz-data"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/google"
+  to = "/.netlify/functions/auth-google"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/callback"
+  to = "/.netlify/functions/auth-callback"
+  status = 200
+
+[[redirects]]
+  from = "/api/classroom-post"
+  to = "/.netlify/functions/classroom-post"
+  status = 200
