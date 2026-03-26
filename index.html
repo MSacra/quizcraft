@@ -750,6 +750,10 @@ textarea { resize: vertical; line-height: 1.6; }
 
       <!-- ── LIVE MONITOR ── -->
       <div id="page-monitor" class="page">
+        <div id="classroomConnectBar" style="border:1px solid #ccc;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+          <span>Connect Google Classroom to post grades directly to assignments.</span>
+          <button class="btn btn-sm" onclick="connectGoogleClassroom()" style="flex-shrink:0;margin-left:12px">Connect Google Classroom</button>
+        </div>
         <div class="grid2" style="align-items:start">
           <div class="card">
             <div class="card-title">Select live quiz</div>
@@ -2656,6 +2660,72 @@ function getAIContext(){
 
 
 
+// === GOOGLE CLASSROOM ===
+function connectGoogleClassroom() {
+  window.location.href = '/api/auth/google';
+}
+
+function disconnectClassroom() {
+  document.cookie = 'gc_token=; Path=/; Max-Age=0';
+  window.location.reload();
+}
+
+function checkClassroomAuth() {
+  var params = new URLSearchParams(window.location.search);
+  var auth = params.get('auth');
+  if (auth === 'success') {
+    window.history.replaceState({}, '', window.location.pathname);
+    var bar = document.getElementById('classroomConnectBar');
+    if (bar) {
+      bar.innerHTML = '<span>Google Classroom connected</span><button class="btn btn-sm btn-red" style="margin-left:12px" onclick="disconnectClassroom()">Disconnect</button>';
+      bar.style.background = 'var(--accent-pale)';
+      bar.style.borderColor = 'var(--accent2)';
+      bar.style.color = 'var(--accent)';
+    }
+  } else if (auth === 'error') {
+    alert('Google Classroom connection failed. Please try again.');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+function postToClassroom(subIndex, quizId) {
+  var q = quizzes.find(function(x){ return x.id === quizId; });
+  if (!q) { alert('Quiz not found.'); return; }
+  var sub = (q.submissions || [])[subIndex];
+  if (!sub) { alert('Submission not found.'); return; }
+
+  var courseId = prompt('Google Classroom Course ID:\n(From classroom URL: classroom.google.com/c/COURSE_ID)');
+  if (!courseId) return;
+  var courseWorkId = prompt('Assignment ID:\n(From assignment URL: .../w/ASSIGNMENT_ID/...)');
+  if (!courseWorkId) return;
+  var studentEmail = prompt('Student Google account email:');
+  if (!studentEmail) return;
+
+  var comment = 'DrSacramentoQuiz Result for ' + sub.name + ':\n'
+    + 'Score: ' + sub.pct + '% (' + Math.round(sub.earned) + '/' + sub.possible + ' marks)\n'
+    + 'Submitted: ' + (sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('en-GB') : 'N/A');
+
+  fetch('/api/classroom-post', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      courseId: courseId,
+      courseWorkId: courseWorkId,
+      studentEmail: studentEmail,
+      comment: comment,
+      grade: sub.earned,
+      maxGrade: sub.possible
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) alert('Posted to Google Classroom successfully!');
+    else alert('Error: ' + (data.error || 'Unknown error'));
+  })
+  .catch(function(e) { alert('Failed to post: ' + e.message); });
+}
+
+
 renderQForm();
 initApiKeyUI();
 (async () => {
@@ -2687,6 +2757,7 @@ initApiKeyUI();
   updateOverview();
   refreshAllSelects();
   setTimeout(checkQuizURLParam, 100);
+  checkClassroomAuth();
 })();
 </script>
 </body>
