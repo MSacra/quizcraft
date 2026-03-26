@@ -1557,6 +1557,13 @@ function loadMonitor() {
       list.innerHTML=subs.map(function(s,si){
         var initials=s.name.split(' ').map(function(n){return n[0];}).join('');
         var time=s.submittedAt?new Date(s.submittedAt).toLocaleString('en-GB'):'';
+        var gcBtn=gcConnected?'<button class="btn btn-sm" style="font-size:11px;margin-left:8px" data-si="'+si+'" data-qid="'+id+'">Post to Classroom</button>':'';
+        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center;margin-left:8px">'+s.pct+'%</span>'+gcBtn+'</div></div>';
+      }).join('');
+      list.querySelectorAll('[data-si]').forEach(function(btn){
+        btn.addEventListener('click',function(){postToClassroom(parseInt(btn.dataset.si),btn.dataset.qid);});
+      });
+        var time=s.submittedAt?new Date(s.submittedAt).toLocaleString('en-GB'):'';
         var gcBtn=gcConnected?'<button class="btn btn-sm" style="font-size:11px;margin-left:8px" onclick="postToClassroom('+si+',''+id+'')">Post to Classroom</button>':'';
         return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center;margin-left:8px">'+s.pct+'%</span>'+gcBtn+'</div></div>';
       }).join('');
