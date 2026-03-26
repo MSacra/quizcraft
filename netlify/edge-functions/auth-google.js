@@ -1,6 +1,5 @@
-// Redirects teacher to Google OAuth consent screen
-export default async function handler(request) {
-  const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
+exports.handler = async function(event, context) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = 'https://quizcraft.hommehonorable.co.uk/api/auth/callback';
   const scope = [
     'https://www.googleapis.com/auth/classroom.courses.readonly',
@@ -16,6 +15,8 @@ export default async function handler(request) {
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
 
-  return Response.redirect(url.toString(), 302);
-}
-export const config = { path: '/api/auth/google' };
+  return {
+    statusCode: 302,
+    headers: { Location: url.toString() }
+  };
+};
