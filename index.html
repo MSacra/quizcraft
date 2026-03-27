@@ -1969,8 +1969,7 @@ function renderStudentQuiz() {
       : `<div class="q-graphic-wrap" id="sgraphic-${qu.id}" style="min-height:140px"><div class="graphic-loading"><span class="spinner"></span>Generating illustration  </div></div>`;
     html += `<div style="margin-bottom:28px" id="sq-${qu.id}">
       ${svgContent}
-      <div class="q-image-block"><img src="${imgUrl}" alt="Q${idx+1}" draggable="false" /></div>
-      <div class="q-body">`;
+`;
 
     if (qu.type==='mcq') {
       html += (qu.options||[]).map((opt,oi)=>`<div class="quiz-opt" id="sopt-${qu.id}-${oi}" onclick="selMCQ('${qu.id}',${oi})"><span class="opt-letter">${['A','B','C','D'][oi]}</span>${opt}</div>`).join('');
@@ -2058,7 +2057,7 @@ function renderStudentQuiz() {
       <div id="sfeedback-${qu.id}"></div>`;
       }
     }
-    html += `</div></div><hr class="divider">`;
+    html += `</div><hr class="divider">`;
   });
 
   document.getElementById('quizPlayerBody').innerHTML = html;
