@@ -2689,7 +2689,7 @@ function connectGoogleClassroom() {
   var clientId = '685350370494-9gklllmgu9slnooqtubofnd6n98sd7k6.apps.googleusercontent.com';
   localStorage.setItem('gc_client_id', clientId);
   var redirectUri = window.location.origin + window.location.pathname.replace(/\/$/,'');
-  var scope = 'https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.rosters.readonly';
+  var scope = 'https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.courses.readonly';
   var url = 'https://accounts.google.com/o/oauth2/v2/auth'
     + '?client_id=' + encodeURIComponent(clientId)
     + '&redirect_uri=' + encodeURIComponent(redirectUri)
@@ -2778,8 +2778,9 @@ function postToClassroom(subIndex) {
   fetch(url, { headers: { Authorization: 'Bearer ' + token } })
   .then(function(r){ return r.json(); })
   .then(function(data){
+    console.log('Classroom API response:', JSON.stringify(data));
     var subs2 = data.studentSubmissions || [];
-    if (!subs2.length) throw new Error('No submissions found. Make sure the student has opened the assignment in Classroom.');
+    if (!subs2.length) { var msg = data.error ? data.error.message : 'No submissions found. Make sure the student has opened the assignment in Classroom (they must click it at least once).'; throw new Error(msg + ' API response: ' + JSON.stringify(data).slice(0,200)); }
     var target = subs2[0];
     return fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions/'+target.id+'?updateMask=assignedGrade,draftGrade', {
       method: 'PATCH',
