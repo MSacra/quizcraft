@@ -655,6 +655,20 @@ textarea { resize: vertical; line-height: 1.6; }
                 <label class="lbl">Criteria &amp; focus for AI (optional)</label>
                 <textarea id="b-criteria" rows="3" placeholder="e.g. Focus on past tense conjugation. Use Cambridge A Level command words."></textarea>
               </div>
+              <div class="form-group">
+                <label class="lbl">Contextual thread / scenario (optional)</label>
+                <textarea id="b-thread" rows="3" placeholder="e.g. A patient James, 67, presents at A&amp;E with fatigue and pallor. All questions relate to this case."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="lbl">Illustration style</label>
+                <select id="b-illus-type">
+                  <option value="auto">Auto (AI chooses)</option>
+                  <option value="scene">Scene / diagram</option>
+                  <option value="chart">Chart (bar, line or pie)</option>
+                  <option value="dataset">Fake data table</option>
+                  <option value="source">Source extract</option>
+                </select>
+              </div>
             </div>
 
             <div class="card">
@@ -1245,14 +1259,18 @@ async function genAIQuestion() {
     + '\n- Marks: ' + ctx.marks + '\n- Difficulty: ' + diff
     + (ctx.command ? '\n- Command word: ' + ctx.command : '')
     + (ctx.criteria ? '\n- Extra criteria: ' + ctx.criteria : '')
+    + (ctx.thread ? '\n- Scenario/thread: ' + ctx.thread : '')
     + '\n\nReturn ONLY this JSON structure:\n' + (specs[currentQType]||specs.mcq)
-    + '\n\nNo markdown, no explanation.';
+    + '\n\nNo markdown, no explanation.'
+    + (ctx.thread ? '\nAll question content must fit the scenario: ' + ctx.thread : '');
   try {
     const raw = await callClaude(prompt, 800);
     const parsed = JSON.parse(raw);
     if (!parsed.text) throw new Error('No text');
-    builderQs.push({ id:Date.now(), type:currentQType, marks:ctx.marks, topic:ctx.topic, ks:ctx.ks, ...parsed });
+    var newQ = { id:Date.now(), type:currentQType, marks:ctx.marks, topic:ctx.topic, ks:ctx.ks, ...parsed };
+    builderQs.push(newQ);
     renderBank();
+    generateIllustration(newQ, {subject:ctx.subject,ks:ctx.ks}, ctx.illustType, ctx.thread, uploadedFileText||'').then(function(svg){ if(svg){newQ._svg=svg;renderBank();} });
   } catch(e) { alert('Generation failed: ' + e.message); }
   btn.disabled=false; btn.innerHTML='Generate with AI   ';
 }
@@ -1361,7 +1379,8 @@ function saveQuiz(status) {
     const b=document.getElementById('editModeBanner'); if(b) b.remove();
     alert('Quiz "'+title+'" updated!');
   } else {
-    quizzes.push({id:'qz-'+Date.now(),title,subject,ks,cls,status,questions:JSON.parse(JSON.stringify(builderQs)),createdAt:new Date().toLocaleDateString('en-GB'),submissions:simulateSubmissions(builderQs,status)});
+    var ctx2=getAIContext();
+    quizzes.push({id:'qz-'+Date.now(),title,subject,ks,cls,status,questions:JSON.parse(JSON.stringify(builderQs)),createdAt:new Date().toLocaleDateString('en-GB'),submissions:simulateSubmissions(builderQs,status),_thread:ctx2.thread,_illustType:ctx2.illustType});
     alert('Quiz "'+title+'" '+(status==='live'?'published':'saved as draft')+'!');
   }
   builderQs=[]; renderBank(); updateOverview(); refreshAllSelects(); persistQuizzes(); nav('quizzes');
@@ -1511,7 +1530,7 @@ async function publishQuiz(id) {
       if(qi._svg) continue;
       if(qi.customImage){qi._svg='<svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"><image href="'+qi.customImage+'" x="0" y="0" width="760" height="160" preserveAspectRatio="xMidYMid meet"/></svg>';continue;}
       st.textContent='Generating illustration '+(i+1)+' of '+q.questions.length+'...';
-      try{const raw=await callClaude('Create an educational SVG for a '+q.ks+' '+q.subject+' question on '+( qi.topic||q.subject)+'. Output ONLY the SVG. Start: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> then <rect width="760" height="160" fill="#faf9f6"/> then 3-5 elements, text in #555 sans-serif 12px.',1800);const m=raw.match(/<svg[\s\S]+<\/svg>/i);qi._svg=m?m[0]:null;}catch(e){qi._svg=null;}
+      try{qi._svg=await generateIllustration(qi,q,q._illustType||'auto',q._thread||'','');}catch(e){qi._svg=null;}
     }
     bar.style.width='90%'; st.textContent='Saving...';
     q.status='live'; q.submissions=simulateSubmissions(q.questions,'live');
@@ -1928,34 +1947,11 @@ function wrapText(ctx, text, maxW, fs) {
   return lines;
 }
 
-async function fetchSVGGraphic(q) {
-  // Return cached SVG if already pre-generated
-  if (q._svg) return q._svg;
-  if (q.customImage) {
-    return '<svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"><image href="' + q.customImage + '" x="0" y="0" width="760" height="160" preserveAspectRatio="xMidYMid meet"/></svg>';
-  }
-  const ks = activeQuiz?.ks || '';
-  const subject = activeQuiz?.subject || '';
-  const prompt = 'Create an educational SVG illustration that CONTEXTUALISES the subject area for this ' + ks + ' ' + subject + ' question.\n\n'
-    + 'Topic/strand: ' + (q.topic || subject) + '\n'
-    + 'Question (for domain context only    do NOT hint at or reveal the answer): "' + q.text + '"\n\n'
-    + 'CRITICAL RULE: Illustrate the SETTING or DOMAIN, never the answer.\n\n'
-    + 'Output ONLY the raw SVG element    nothing before or after, no markdown, no explanation.\n'
-    + 'Requirements:\n'
-    + '- Opening tag exactly: <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg">\n'
-    + '- First child: <rect width="760" height="160" fill="#faf9f6"/>\n'
-    + '- Muted palette. Text labels in #555, font-family="sans-serif" size 12-13\n'
-    + '- 3-5 elements. No <image>, no <foreignObject>';
-  try {
-    const raw = await callClaude(prompt, 2000);
-    const m = raw.match(/<svg[\s\S]+?<\/svg>/i);
-    if (m) return m[0];
-    if (raw.trim().startsWith('<svg')) return raw.trim();
-    return null;
-  } catch(e) {
-    return null;
-  }
+async function fetchSVGGraphic(q, quiz, illustType, thread, resourceHint) {
+  if (q._svg) return q._svg; // Return cached
+  return generateIllustration(q, quiz||activeQuiz, illustType, thread, resourceHint||'');
 }
+
 
 async function renderStudentQuiz() {
   const q = activeQuiz;
@@ -2639,8 +2635,9 @@ function editRemoveImage(){var q=builderQs.find(function(x){return x.id===editin
 async function editGenImage(){
   var q=builderQs.find(function(x){return x.id===editingQId;});if(!q)return;
   var s=getSubject(),ks=document.getElementById('b-ks').value;
-  var prompt='Educational SVG for '+ks+' '+s+' question on '+(q.topic||s)+'. ONLY output SVG starting with <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> then <rect width="760" height="160" fill="#faf9f6"/> then 3-5 elements, text #555 sans-serif 12px.';
-  try{var raw=await callClaude(prompt,1800);var m=raw.match(/<svg[\s\S]+<\/svg>/i);q._svg=m?m[0]:null;}catch(e){q._svg=null;}
+  var thread=(document.getElementById('b-thread')||{value:''}).value.trim()||'';
+  var illustType=(document.getElementById('b-illus-type')||{value:'auto'}).value||'auto';
+  try{q._svg=await generateIllustration(q,{subject:s,ks:ks},illustType,thread,uploadedFileText||'');}catch(e){q._svg=null;}
   closeEditModal();openEditModal(editingQId);renderBank();
 }
 function editRegenImage(){editGenImage();}
@@ -2654,8 +2651,47 @@ function getAIContext(){
     difficulty:(document.getElementById('b-difficulty')||{value:'mixed'}).value||'mixed',
     command:(document.getElementById('b-command')||{value:''}).value||'',
     criteria:(document.getElementById('b-criteria')||{value:''}).value.trim()||'',
+    thread:(document.getElementById('b-thread')||{value:''}).value.trim()||'',
+    illustType:(document.getElementById('b-illus-type')||{value:'auto'}).value||'auto',
     marks:parseInt(document.getElementById('b-marks').value)||1
   };
+}
+
+async function buildIllustrationPrompt(q, quiz, illustType, thread, resourceHint) {
+  var type = illustType || 'auto';
+  var topic = q.topic || (quiz && quiz.subject) || 'the subject';
+  var ks = (quiz && quiz.ks) || 'KS4';
+  var subject = (quiz && quiz.subject) || 'General';
+  var threadNote = thread ? 'Scenario: ' + thread + '. ' : '';
+  var resourceNote = resourceHint ? 'Adapt style/data from this resource: ' + resourceHint.slice(0,300) + '. ' : '';
+  var base = 'Output ONLY raw SVG starting with <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg"> with first child <rect width="760" height="160" fill="#faf9f6"/>. No image or foreignObject tags.';
+  if (type === 'auto') {
+    var roll = Math.random();
+    if (q.type === 'openended' || q.type === 'mcq') {
+      if (roll < 0.25) type = 'chart';
+      else if (roll < 0.45) type = 'dataset';
+      else if (roll < 0.6) type = 'source';
+      else type = 'scene';
+    } else { type = 'scene'; }
+  }
+  if (type === 'chart') {
+    return 'Create an educational SVG chart (bar, line, or pie) with plausible ' + ks + ' ' + subject + ' data on: ' + topic + '. ' + threadNote + resourceNote + 'Include axis labels, title, realistic invented values. Text #555 sans-serif 11px. ' + base;
+  } else if (type === 'dataset') {
+    return 'Create an educational SVG data table with a plausible made-up dataset for ' + ks + ' ' + subject + ' on: ' + topic + '. ' + threadNote + resourceNote + 'Include column headers and 3-5 rows of realistic data. Text #333 sans-serif 11px. ' + base;
+  } else if (type === 'source') {
+    return 'Create an educational SVG styled as a historical document, map key, or quoted passage for ' + ks + ' ' + subject + ' on: ' + topic + '. ' + threadNote + resourceNote + 'Include a border, title, and short realistic text. Text #444 serif 11px. ' + base;
+  } else {
+    return 'Create an educational SVG scene or diagram for a ' + ks + ' ' + subject + ' question on: ' + topic + '. ' + threadNote + resourceNote + 'Muted palette, text #555 sans-serif 12px, 3-5 elements, do not reveal the answer. ' + base;
+  }
+}
+
+async function generateIllustration(q, quiz, illustType, thread, resourceHint) {
+  var prompt = await buildIllustrationPrompt(q, quiz, illustType, thread, resourceHint);
+  try {
+    var raw = await callClaude(prompt, 1800);
+    var m = raw.match(/<svg[\s\S]+<\/svg>/i);
+    return m ? m[0] : (raw.trim().startsWith('<svg') ? raw.trim() : null);
+  } catch(e) { return null; }
 }
 
 
