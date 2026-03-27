@@ -2699,25 +2699,49 @@ function connectGoogleClassroom() {
 }
 
 function disconnectClassroom() {
-  document.cookie = 'gc_token=; Path=/; Max-Age=0';
-  window.location.reload();
+  gcAccessToken = '';
+  gcTokenExpiry = 0;
+  localStorage.removeItem('gc_access_token');
+  localStorage.removeItem('gc_token_expiry');
+  checkClassroomAuth();
 }
 
+var gcAccessToken = localStorage.getItem('gc_access_token') || '';
+var gcTokenExpiry = parseInt(localStorage.getItem('gc_token_expiry') || '0');
+
 function checkClassroomAuth() {
-  var params = new URLSearchParams(window.location.search);
-  var auth = params.get('auth');
-  if (auth === 'success') {
-    window.history.replaceState({}, '', window.location.pathname);
-    var bar = document.getElementById('classroomConnectBar');
-    if (bar) {
-      bar.innerHTML = '<span>Google Classroom connected</span><button class="btn btn-sm btn-red" style="margin-left:12px" onclick="disconnectClassroom()">Disconnect</button>';
-      bar.style.background = 'var(--accent-pale)';
-      bar.style.borderColor = 'var(--accent2)';
-      bar.style.color = 'var(--accent)';
+  // Parse implicit flow token from URL hash
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.slice(1));
+    var token = params.get('access_token');
+    var expiresIn = parseInt(params.get('expires_in') || '3600');
+    if (token) {
+      gcAccessToken = token;
+      gcTokenExpiry = Date.now() + expiresIn * 1000;
+      localStorage.setItem('gc_access_token', token);
+      localStorage.setItem('gc_token_expiry', String(gcTokenExpiry));
+      window.history.replaceState({}, '', window.location.pathname);
     }
-  } else if (auth === 'error') {
+  }
+  // Also handle server-side callback
+  var params2 = new URLSearchParams(window.location.search);
+  if (params2.get('auth') === 'error') {
     alert('Google Classroom connection failed. Please try again.');
     window.history.replaceState({}, '', window.location.pathname);
+  }
+  // Update bar
+  var bar = document.getElementById('classroomConnectBar');
+  if (!bar) return;
+  var connected = gcAccessToken && Date.now() < gcTokenExpiry;
+  if (connected) {
+    bar.innerHTML = '<span style="color:var(--accent)">Google Classroom connected</span><button class="btn btn-sm btn-red" style="margin-left:12px" onclick="disconnectClassroom()">Disconnect</button>';
+    bar.style.background = 'var(--accent-pale)';
+    bar.style.borderColor = 'var(--accent2)';
+  } else {
+    bar.innerHTML = '<span>Connect Google Classroom to post grades directly to assignments.</span><button class="btn btn-sm" style="margin-left:12px" onclick="connectGoogleClassroom()">Connect Google Classroom</button>';
+    bar.style.background = '';
+    bar.style.borderColor = '#ccc';
   }
 }
 
