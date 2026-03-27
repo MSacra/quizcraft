@@ -1953,7 +1953,7 @@ async function fetchSVGGraphic(q, quiz, illustType, thread, resourceHint) {
 }
 
 
-async function renderStudentQuiz() {
+function renderStudentQuiz() {
   const q = activeQuiz;
   document.getElementById('qo-title').textContent = q.title;
   document.getElementById('qo-meta').textContent = `${q.subject}   ${q.ks}${q.cls?'   '+q.cls:''}`;
@@ -2063,25 +2063,16 @@ async function renderStudentQuiz() {
   document.getElementById('quizPlayerBody').innerHTML = html;
   document.getElementById('quizSubmitRow').style.display = 'block';
 
-  for (const qu of q.questions) {
-    if (qu._svg) continue; // already injected inline above
-    const wrap = document.getElementById(`sgraphic-${qu.id}`);
-    if (!wrap) continue;
-    try {
-      const svg = await fetchSVGGraphic(qu);
-      if (svg) {
-        qu._svg = svg; // cache for future use
-        wrap.innerHTML = svg;
-        wrap.style.minHeight = '0';
-      } else {
-        wrap.innerHTML = `<div style="padding:1rem;font-size:12px;color:var(--ink3);font-style:italic;text-align:center">Illustration unavailable</div>`;
-        wrap.style.minHeight = '0';
-      }
-    } catch(e) {
-      wrap.style.display = 'none';
-    }
-  }
-  persistQuizzes(); // save newly fetched SVGs to DB
+  // Fetch SVGs non-blocking — don't await, let questions render immediately
+  q.questions.forEach(function(qu) {
+    if (qu._svg) return;
+    var wrap = document.getElementById('sgraphic-' + qu.id);
+    if (!wrap) return;
+    fetchSVGGraphic(qu).then(function(svg) {
+      if (svg) { qu._svg = svg; wrap.innerHTML = svg; wrap.style.minHeight = '0'; persistQuizzes(); }
+      else { wrap.innerHTML = ''; wrap.style.minHeight = '0'; }
+    }).catch(function() { wrap.style.display = 'none'; });
+  });
 }
 
 function selMCQ(qid,oi) {
