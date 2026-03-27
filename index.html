@@ -1509,6 +1509,7 @@ function renderQuizTable() {
           ${q.status==='live'?`<button class="btn btn-sm" onclick="closeQuiz('${q.id}')">Close</button>`:''} ${q.status==='live'?`<button class="btn btn-sm btn-primary" onclick="copyQuizLink('${q.id}')">&#128279; Copy link</button>`:''}
           <button class="btn btn-sm" onclick="editQuiz('${q.id}')">Edit</button>
           <button class="btn btn-sm" onclick="duplicateQuiz('${q.id}')">Duplicate</button>
+          ${q.status==='live'?`<button class="btn btn-sm" onclick="syncQuizToServer('${q.id}')">Sync to server</button>`:''}
           <button class="btn btn-sm" onclick="nav('analytics');document.getElementById('analyticsQuizSelect').value='${q.id}';loadAnalytics()">Analytics</button>
           <button class="btn btn-sm btn-red" onclick="deleteQuiz('${q.id}')">Delete</button>
         </div>
@@ -2798,6 +2799,32 @@ function postToClassroom(subIndex) {
     if (btn) { btn.disabled=false; btn.textContent='Post to Classroom'; }
     alert('Error: ' + e.message);
   });
+}
+
+
+async function syncQuizToServer(id) {
+  var q = quizzes.find(function(x){ return x.id===id; });
+  if (!q) return;
+  var btn = event.target;
+  btn.disabled = true; btn.textContent = 'Syncing...';
+  try {
+    var res = await fetch('/api/quiz-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(q)
+    });
+    var data = await res.json();
+    if (data.ok) {
+      btn.textContent = 'Synced!';
+      btn.style.background = 'var(--accent)'; btn.style.color = '#fff';
+      setTimeout(function(){ btn.disabled=false; btn.textContent='Sync to server'; btn.style.background=''; btn.style.color=''; }, 2000);
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch(e) {
+    alert('Sync failed: ' + e.message);
+    btn.disabled=false; btn.textContent='Sync to server';
+  }
 }
 
 
