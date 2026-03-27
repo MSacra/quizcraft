@@ -1575,7 +1575,7 @@ function loadMonitor() {
       list.innerHTML=subs.map(function(s,si){
         var initials=s.name.split(' ').map(function(n){return n[0];}).join('');
         var time=s.submittedAt?new Date(s.submittedAt).toLocaleString('en-GB'):'';
-        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">'+s.pct+'%</span><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="postToClassroom('+si+')">Post to Classroom</button></div></div>';
+        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">'+s.pct+'%</span><button class="btn btn-sm btn-post-classroom" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="postToClassroom('+si+')">Post to Classroom</button></div></div>';
       }).join('');
     }).catch(()=>{list.innerHTML='<div class="empty">Could not load.</div>';});
 }
@@ -2763,24 +2763,25 @@ function postToClassroom(subIndex) {
   if (!courseId) return;
   var courseWorkId = prompt('Assignment ID:\n(From URL: .../a/ASSIGNMENT_ID/details)');
   if (!courseWorkId) return;
-  var studentEmail = prompt('Student Google account email:');
-  if (!studentEmail) return;
+  var studentEmail = prompt('Student Google account email:\n(Leave blank to post to first available submission)');
 
-  var btn = document.querySelector('[data-si="'+subIndex+'"]');
+  var btns = document.querySelectorAll('.btn-post-classroom');
+  var btn = btns[subIndex] || null;
   if (btn) { btn.disabled=true; btn.textContent='Posting...'; }
 
-  // Find the student submission in Classroom
-  fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions?userId='+encodeURIComponent(studentEmail), {
-    headers: { Authorization: 'Bearer ' + token }
-  })
+  var resultText = sub.name + ' scored ' + sub.pct + '% (' + Math.round(sub.earned) + '/' + sub.possible + ' marks) on ' + (q.title||'quiz');
+
+  // Fetch all submissions then match by email or use first
+  var url = 'https://classroom.googleapis.com/v1/courses/' + courseId + '/courseWork/' + courseWorkId + '/studentSubmissions?pageSize=100';
+  if (studentEmail) url += '&userId=' + encodeURIComponent(studentEmail);
+
+  fetch(url, { headers: { Authorization: 'Bearer ' + token } })
   .then(function(r){ return r.json(); })
   .then(function(data){
-    var submission = data.studentSubmissions && data.studentSubmissions[0];
-    if (!submission) {
-      throw new Error('Student not found in this assignment. Ask them to open the assignment in Classroom first.');
-    }
-    // Patch grade
-    return fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions/'+submission.id+'?updateMask=assignedGrade,draftGrade', {
+    var subs2 = data.studentSubmissions || [];
+    if (!subs2.length) throw new Error('No submissions found. Make sure the student has opened the assignment in Classroom.');
+    var target = subs2[0];
+    return fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions/'+target.id+'?updateMask=assignedGrade,draftGrade', {
       method: 'PATCH',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignedGrade: sub.earned, draftGrade: sub.earned })
@@ -2790,7 +2791,7 @@ function postToClassroom(subIndex) {
   .then(function(data){
     if (btn) { btn.disabled=false; btn.textContent='Post to Classroom'; }
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    alert('Grade posted to Google Classroom!\n'+sub.name+': '+sub.earned+'/'+sub.possible+' marks ('+sub.pct+'%)');
+    alert('Posted to Google Classroom!\n' + resultText);
   })
   .catch(function(e){
     if (btn) { btn.disabled=false; btn.textContent='Post to Classroom'; }
