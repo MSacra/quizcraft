@@ -2689,7 +2689,16 @@ async function generateIllustration(q, quiz, illustType, thread, resourceHint) {
 
 // === GOOGLE CLASSROOM ===
 function connectGoogleClassroom() {
-  window.location.href = '/api/auth/google';
+  var clientId = '685350370494-9gklllmgu9slnooqtubofnd6n98sd7k6.apps.googleusercontent.com';
+  localStorage.setItem('gc_client_id', clientId);
+  var redirectUri = window.location.origin + window.location.pathname.replace(/\/$/,'');
+  var scope = 'https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.rosters.readonly';
+  var url = 'https://accounts.google.com/o/oauth2/v2/auth'
+    + '?client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(redirectUri)
+    + '&response_type=token'
+    + '&scope=' + encodeURIComponent(scope);
+  window.location.href = url;
 }
 
 function disconnectClassroom() {
@@ -2721,35 +2730,50 @@ function postToClassroom(subIndex, quizId) {
   var sub = (q.submissions || [])[subIndex];
   if (!sub) { alert('Submission not found.'); return; }
 
-  var courseId = prompt('Google Classroom Course ID:\n(From classroom URL: classroom.google.com/c/COURSE_ID)');
+  var token = gcAccessToken;
+  if (!token || Date.now() >= gcTokenExpiry) {
+    alert('Please connect Google Classroom first using the button above.');
+    connectGoogleClassroom();
+    return;
+  }
+
+  var courseId = prompt('Course ID:\n(From URL: classroom.google.com/c/COURSE_ID)');
   if (!courseId) return;
-  var courseWorkId = prompt('Assignment ID:\n(From assignment URL: .../w/ASSIGNMENT_ID/...)');
+  var courseWorkId = prompt('Assignment ID:\n(From URL: .../a/ASSIGNMENT_ID/details)');
   if (!courseWorkId) return;
   var studentEmail = prompt('Student Google account email:');
   if (!studentEmail) return;
 
-  var comment = 'DrSacramentoQuiz Result for ' + sub.name + ':\n'
-    + 'Score: ' + sub.pct + '% (' + Math.round(sub.earned) + '/' + sub.possible + ' marks)\n'
-    + 'Submitted: ' + (sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('en-GB') : 'N/A');
+  var btn = document.querySelector('[data-si="'+subIndex+'"]');
+  if (btn) { btn.disabled=true; btn.textContent='Posting...'; }
 
-  fetch('/api/classroom-post', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      courseId: courseId,
-      courseWorkId: courseWorkId,
-      studentEmail: studentEmail,
-      comment: comment,
-      grade: sub.earned,
-      maxGrade: sub.possible
-    })
+  // Find the student submission in Classroom
+  fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions?userId='+encodeURIComponent(studentEmail), {
+    headers: { Authorization: 'Bearer ' + token }
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.ok) alert('Posted to Google Classroom successfully!');
-    else alert('Error: ' + (data.error || 'Unknown error'));
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var submission = data.studentSubmissions && data.studentSubmissions[0];
+    if (!submission) {
+      throw new Error('Student not found in this assignment. Ask them to open the assignment in Classroom first.');
+    }
+    // Patch grade
+    return fetch('https://classroom.googleapis.com/v1/courses/'+courseId+'/courseWork/'+courseWorkId+'/studentSubmissions/'+submission.id+'?updateMask=assignedGrade,draftGrade', {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignedGrade: sub.earned, draftGrade: sub.earned })
+    });
   })
-  .catch(function(e) { alert('Failed to post: ' + e.message); });
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (btn) { btn.disabled=false; btn.textContent='Post to Classroom'; }
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    alert('Grade posted to Google Classroom!\n'+sub.name+': '+sub.earned+'/'+sub.possible+' marks ('+sub.pct+'%)');
+  })
+  .catch(function(e){
+    if (btn) { btn.disabled=false; btn.textContent='Post to Classroom'; }
+    alert('Error: ' + e.message);
+  });
 }
 
 
