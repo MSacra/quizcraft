@@ -1571,10 +1571,11 @@ function loadMonitor() {
       document.getElementById('mon-submitted').textContent=subs.length;
       document.getElementById('mon-inprogress').textContent=0;
       if(!subs.length){list.innerHTML='<div class="empty">No submissions yet.</div>';return;}
+      window._monitorQuizId = id;
       list.innerHTML=subs.map(function(s,si){
         var initials=s.name.split(' ').map(function(n){return n[0];}).join('');
         var time=s.submittedAt?new Date(s.submittedAt).toLocaleString('en-GB'):'';
-        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">'+s.pct+'%</span><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="postToClassroom('+si+',\'' +id+ '\')">Post to Classroom</button></div></div>';
+        return '<div class="student-row"><div class="avatar">'+initials+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+s.name+'</div><div style="font-size:11px;color:var(--ink3)">'+s.pct+'% / '+s.earned+'/'+s.possible+' marks'+(time?' / '+time:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-wrap" style="max-width:80px"><div class="progress-bar" style="width:'+s.pct+'%"></div></div><span class="badge badge-green" style="min-width:52px;text-align:center">'+s.pct+'%</span><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="postToClassroom('+si+')">Post to Classroom</button></div></div>';
       }).join('');
     }).catch(()=>{list.innerHTML='<div class="empty">Could not load.</div>';});
 }
@@ -2720,7 +2721,8 @@ function checkClassroomAuth() {
   }
 }
 
-function postToClassroom(subIndex, quizId) {
+function postToClassroom(subIndex) {
+  var quizId = window._monitorQuizId;
   var q = quizzes.find(function(x){ return x.id === quizId; });
   if (!q) { alert('Quiz not found.'); return; }
   var sub = (q.submissions || [])[subIndex];
