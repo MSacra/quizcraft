@@ -2414,23 +2414,29 @@ function checkQuizURLParam() {
   document.documentElement.style.visibility='';
   document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><div style="font-size:20px;margin-bottom:12px">Loading quiz...</div></div>';
   fetch('/api/quiz-data?id=' + encodeURIComponent(quizId))
-    .then(function(r){ return r.text(); })
-    .then(function(text){
-      // Sanitise literal newlines inside JSON strings before parsing
-      var cleaned = text.replace(/([^\\])\n/g, function(m, p1){ return p1 + '\\n'; });
-      var q;
-      try { q = JSON.parse(cleaned); } catch(e) { q = JSON.parse(text); }
-      return q;
+    .then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
     })
-    .then(function(q){
-      if (!q || q.error || q.status!=='live') {
-        document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2>Quiz not available</h2><p style="color:#8a8480">This quiz is not currently active.</p></div>';
-        return;
+    .then(function(text){
+      var q;
+      try {
+        q = JSON.parse(text);
+      } catch(e) {
+        // Try sanitising literal newlines
+        try {
+          var cleaned = text.replace(/\n/g, '\\n').replace(/\r/g, '');
+          q = JSON.parse(cleaned);
+        } catch(e2) {
+          throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + text.slice(0,200));
+        }
       }
+      if (!q || q.error) throw new Error('Quiz error: ' + (q && q.error || 'unknown'));
+      if (q.status !== 'live') throw new Error('Quiz status: ' + q.status);
       launchStudentView(q);
     })
-    .catch(function(){
-      document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2>Could not load quiz</h2><p style="color:#8a8480">Please check your connection.</p></div>';
+    .catch(function(e){
+      document.body.innerHTML = '<div style="font-family:DM Sans,sans-serif;max-width:480px;margin:80px auto;padding:32px;text-align:center"><h2>Could not load quiz</h2><p style="color:#8a8480;margin-top:8px">' + e.message + '</p></div>';
     });
 }
 
