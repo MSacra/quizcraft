@@ -22,6 +22,10 @@ export default async function handler(request, context) {
       quizToSave.questions = (body.questions || []).map(function(q) {
         const clean = Object.assign({}, q);
         delete clean._svg;
+        // Sanitise markScheme — replace literal newlines with \n escape
+        if (clean.markScheme) {
+          clean.markScheme = clean.markScheme.replace(/\r\n/g, '\\n').replace(/\n/g, '\\n').replace(/\r/g, '\\n');
+        }
         return clean;
       });
       await store.setJSON('quiz-' + body.id, quizToSave);
