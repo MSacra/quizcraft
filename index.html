@@ -2427,8 +2427,37 @@ function checkQuizURLParam() {
     });
 }
 
+function normaliseQuestionTypes(questions) {
+  var typeMap = {
+    'short_answer': 'openended', 'short answer': 'openended',
+    'fill_blank': 'gapfill', 'fill_in_the_blank': 'gapfill', 'fill blank': 'gapfill',
+    'describe': 'openended', 'explain': 'openended', 'evaluate': 'openended',
+    'multiple_choice': 'mcq', 'multiple choice': 'mcq',
+    'matching': 'grid', 'match': 'grid',
+    'true_false': 'mcq', 'true/false': 'mcq'
+  };
+  return (questions || []).map(function(q) {
+    var t = (q.type || '').toLowerCase().trim();
+    if (typeMap[t]) {
+      var fixed = Object.assign({}, q, { type: typeMap[t] });
+      // For short_answer/describe with no markScheme, add a default
+      if ((typeMap[t] === 'openended') && !fixed.markScheme) {
+        fixed.markScheme = 'Award marks for relevant, accurate, well-explained points.';
+      }
+      // For fill_blank with no answers array, try to extract from text
+      if (typeMap[t] === 'gapfill' && !fixed.answers) {
+        fixed.answers = ['[see question]'];
+      }
+      return fixed;
+    }
+    return q;
+  });
+}
+
 function launchStudentView(q) {
   document.documentElement.style.visibility='';
+  // Normalise any non-standard question types
+  q.questions = normaliseQuestionTypes(q.questions);
   var name = prompt('Please enter your full name to begin:');
   if (!name || !name.trim()) { window.location.href=window.location.pathname; return; }
   studentName = name.trim(); studentAnswers = {}; aiMarkingStore = {};
