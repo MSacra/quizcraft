@@ -2476,11 +2476,19 @@ function launchStudentView(q) {
   studentName = name.trim(); studentAnswers = {}; aiMarkingStore = {};
   activeQuiz = q;
   var shell = document.querySelector('.shell'); if (shell) shell.style.display='none';
-  document.getElementById('quizOverlay').classList.add('open');
-  document.getElementById('quizPlayerBody').innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)"><div style="font-size:22px;margin-bottom:12px">Loading your quiz...</div><div style="font-size:13px;opacity:0.6">Just a moment, ' + name.trim() + '</div></div>';
+  var overlay = document.getElementById('quizOverlay');
+  var playerBody = document.getElementById('quizPlayerBody');
+  var submitRow = document.getElementById('quizSubmitRow');
+  if (!overlay || !playerBody || !submitRow) {
+    // DOM not ready yet - wait and retry
+    setTimeout(function(){ launchStudentView(q); }, 200);
+    return;
+  }
+  overlay.classList.add('open');
+  playerBody.innerHTML = '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.7)"><div style="font-size:22px;margin-bottom:12px">Loading your quiz...</div><div style="font-size:13px;opacity:0.6">Just a moment, ' + name.trim() + '</div></div>';
   setTimeout(function() {
     renderStudentQuiz();
-    document.getElementById('quizSubmitRow').style.display='block';
+    submitRow.style.display='block';
     var hasSVGs = q.questions && q.questions.some(function(qi){ return qi._svg; });
     if (!hasSVGs) { pregenerateSVGs(q, null).then(function(){ persistQuizzes(); }); }
   }, 50);
@@ -2900,8 +2908,9 @@ initApiKeyUI();
   }
   updateOverview();
   refreshAllSelects();
-  setTimeout(checkQuizURLParam, 100);
   checkClassroomAuth();
+  // Run after full init - wait for DOM to be completely ready
+  setTimeout(checkQuizURLParam, 300);
 })();
 </script>
 </body>
